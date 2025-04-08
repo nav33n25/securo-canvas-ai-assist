@@ -65,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      // Fix the from() call by explicitly typing it
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -162,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
 
     try {
+      // Fix the from() call by explicitly typing it
       const { error } = await supabase
         .from('profiles')
         .update(data)
