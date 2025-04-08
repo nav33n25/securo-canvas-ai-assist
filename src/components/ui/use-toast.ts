@@ -1,3 +1,5 @@
-import { useToast, toast } from "@/hooks/use-toast";
 
-export { useToast, toast };
+// We should import directly from the hooks file, not recursively
+import { toast, useToast } from "@/hooks/use-toast"
+
+export { toast, useToast }

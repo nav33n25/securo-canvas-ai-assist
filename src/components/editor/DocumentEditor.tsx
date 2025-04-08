@@ -1,12 +1,12 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { createEditor, Descendant } from 'slate';
-import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
+import { Slate, Editable, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
 import Toolbar from './Toolbar';
 import { renderElement, renderLeaf } from './RenderElements';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { withSecurityBlocks } from './withSecurityBlocks';
 import { Shield, Save } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
