@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Editor, Transforms, Element as SlateElement } from 'slate';
+import { Editor, Transforms, Element as SlateElement, Node } from 'slate';
 import { useSlate } from 'slate-react';
 import { 
   Bold, 
@@ -19,6 +19,7 @@ import {
   CheckSquare
 } from 'lucide-react';
 import { Toggle } from '@/components/ui/toggle';
+import { CustomElement } from '@/types/slate';
 
 interface ToolbarProps {
   editor: Editor;

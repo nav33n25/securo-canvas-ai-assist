@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { createEditor, Descendant } from 'slate';
-import { Slate, Editable, withReact } from 'slate-react';
+import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { withHistory } from 'slate-history';
 import Toolbar from './Toolbar';
 import { renderElement, renderLeaf } from './RenderElements';
@@ -74,7 +74,7 @@ const DocumentEditor: React.FC = () => {
               <div className="border rounded-md p-4 mt-2 min-h-[500px] slate-content">
                 <Slate 
                   editor={editor} 
-                  value={value}
+                  initialValue={value}
                   onChange={newValue => setValue(newValue)}
                 >
                   <Editable
