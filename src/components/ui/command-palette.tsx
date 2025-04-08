@@ -1,7 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { FileText, FileCheck, Bell, Sparkles, Search, Key, Settings, User, BookOpen, Shield, CheckSquare, Database, MonitorSmartphone, Sword, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -205,7 +203,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] p-0" hideClose>
+      <DialogContent className="sm:max-w-[550px] p-0">
         <Command className="rounded-lg border shadow-md">
           <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
