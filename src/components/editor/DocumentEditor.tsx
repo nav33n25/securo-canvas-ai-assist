@@ -7,22 +7,34 @@ import Toolbar from './Toolbar';
 import { renderElement, renderLeaf } from './RenderElements';
 import { Card, CardContent } from '@/components/ui/card';
 import { withSecurityBlocks } from './withSecurityBlocks';
-import { Shield, Save } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
 import { toast } from '@/components/ui/use-toast';
+import { CustomElement } from '@/types/slate';
 
 interface DocumentEditorProps {
   initialValue: Descendant[];
   onChange: (value: Descendant[]) => void;
 }
 
+// Default valid empty slate content
+const emptyEditorContent: Descendant[] = [{ 
+  type: 'paragraph' as const, 
+  children: [{ text: '' }] 
+}];
+
 const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange }) => {
-  // Use initialValue from props, but fallback to a valid structure if it's empty
-  const defaultValue = useMemo(() => 
-    Array.isArray(initialValue) && initialValue.length > 0 
-      ? initialValue 
-      : [{ type: 'paragraph', children: [{ text: '' }] }], 
-  [initialValue]);
+  // Use initialValue from props, but fallback to empty content if it's empty or invalid
+  const defaultValue = useMemo(() => {
+    if (Array.isArray(initialValue) && initialValue.length > 0) {
+      // Validate that content elements have proper type strings that match our CustomElement types
+      const isValid = initialValue.every(node => 
+        typeof (node as any).type === 'string' && Array.isArray((node as any).children)
+      );
+      return isValid ? initialValue : emptyEditorContent;
+    }
+    return emptyEditorContent;
+  }, [initialValue]);
   
   const [value, setValue] = useState<Descendant[]>(defaultValue);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
@@ -34,7 +46,17 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange 
   // If initialValue changes (e.g., when document is loaded), update the editor
   useEffect(() => {
     if (Array.isArray(initialValue) && initialValue.length > 0) {
-      setValue(initialValue);
+      // Additional validation to ensure content conforms to expected types
+      try {
+        setValue(initialValue);
+      } catch (error) {
+        console.error('Error setting editor value:', error);
+        toast({
+          variant: "destructive",
+          title: "Editor Error",
+          description: "There was an issue loading the document content.",
+        });
+      }
     }
   }, [initialValue]);
 
@@ -72,7 +94,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange 
                 </div>
                 <Slate 
                   editor={editor} 
-                  initialValue={value}
+                  value={value}
                   onChange={handleChange}
                 >
                   <Editable
