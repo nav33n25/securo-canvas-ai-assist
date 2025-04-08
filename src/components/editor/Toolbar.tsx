@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Editor, Transforms, Element as SlateElement } from 'slate';
+import { Editor, Transforms, Element as SlateElement, NodeEntry } from 'slate';
 import { useSlate } from 'slate-react';
 import { 
   Bold, 
@@ -31,10 +31,12 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor }) => {
   };
 
   const isBlockActive = (format: string) => {
-    const [match] = Editor.nodes(editor, {
+    const nodeEntries = Editor.nodes(editor, {
       match: n => 
         !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === format,
     });
+    
+    const match = Array.from(nodeEntries)[0];
     return !!match;
   };
 
