@@ -59,7 +59,11 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor }) => {
     Transforms.setNodes(
       editor,
       { type: isActive ? 'paragraph' : format } as Partial<CustomElement>,
-      { match: n => Editor.isBlock(editor, n) }
+      { 
+        match: n => {
+          return Editor.isBlock(editor, n) && SlateElement.isElement(n);
+        }
+      }
     );
   };
 
