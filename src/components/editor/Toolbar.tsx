@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Editor, Transforms, Element as SlateElement, NodeEntry } from 'slate';
+import { Editor, Transforms, Element as SlateElement } from 'slate';
 import { useSlate } from 'slate-react';
 import { 
   Bold, 

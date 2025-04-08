@@ -1,5 +1,5 @@
 
-import { Editor, Transforms, Element, Node, NodeEntry } from 'slate';
+import { Editor, Transforms, Element, Node } from 'slate';
 
 export const withSecurityBlocks = (editor: Editor): Editor => {
   const { insertBreak, isVoid } = editor;
@@ -16,7 +16,7 @@ export const withSecurityBlocks = (editor: Editor): Editor => {
         at: selection,
       });
       
-      const currentNode = Array.from(nodeEntries)[0] as NodeEntry<Element> | undefined;
+      const currentNode = Array.from(nodeEntries)[0];
       
       if (currentNode) {
         const [node, path] = currentNode;
