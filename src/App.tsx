@@ -13,6 +13,9 @@ import LandingPage from "./pages/Landing";
 import DocumentPage from "./pages/document/[id]";
 import ProfilePage from "./pages/profile";
 import TemplatesPage from "./pages/templates";
+import LearningHubPage from "./pages/learning";
+import BugBountyPage from "./pages/bug-bounty";
+import CompliancePage from "./pages/compliance";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -34,6 +37,9 @@ const App = () => (
               <Route path="/document/:id" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/templates" element={<ProtectedRoute><TemplatesPage /></ProtectedRoute>} />
+              <Route path="/learning" element={<ProtectedRoute><LearningHubPage /></ProtectedRoute>} />
+              <Route path="/bug-bounty" element={<ProtectedRoute><BugBountyPage /></ProtectedRoute>} />
+              <Route path="/compliance" element={<ProtectedRoute><CompliancePage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
