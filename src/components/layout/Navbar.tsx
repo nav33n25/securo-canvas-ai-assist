@@ -13,7 +13,8 @@ const Navbar: React.FC = () => {
     <header className="border-b sticky top-0 z-30 bg-background px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <SidebarTrigger asChild>
+          {/* Fix: Ensure SidebarTrigger has exactly one child */}
+          <SidebarTrigger>
             <Button variant="ghost" size="icon" className="md:hidden">
               <MenuIcon className="h-5 w-5" />
               <span className="sr-only">Toggle sidebar</span>
