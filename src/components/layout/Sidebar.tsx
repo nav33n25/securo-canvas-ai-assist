@@ -12,7 +12,16 @@ import {
   FilePlus,
   FileCheck,
   Users,
-  Layout
+  Layout,
+  BookOpen,
+  Target,
+  Briefcase,
+  MonitorSmartphone,
+  Database,
+  CheckSquare,
+  Sword,
+  Radio,
+  Ticket
 } from 'lucide-react';
 import {
   Sidebar as SidebarContainer,
@@ -43,7 +52,7 @@ const Sidebar: React.FC = () => {
       
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>Core</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -55,8 +64,8 @@ const Sidebar: React.FC = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location.pathname.startsWith('/document')}>
-                  <Link to="/">
+                <SidebarMenuButton asChild isActive={isActive('/documents') || location.pathname.startsWith('/document')}>
+                  <Link to="/documents">
                     <FileText />
                     <span>Documents</span>
                   </Link>
@@ -75,30 +84,62 @@ const Sidebar: React.FC = () => {
         </SidebarGroup>
         
         <SidebarGroup>
-          <SidebarGroupLabel>Security</SidebarGroupLabel>
+          <SidebarGroupLabel>Professional</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/vulnerabilities')}>
-                  <Link to="/vulnerabilities">
-                    <ShieldAlert />
-                    <span>Vulnerabilities</span>
+                <SidebarMenuButton asChild isActive={isActive('/learning')}>
+                  <Link to="/learning">
+                    <BookOpen />
+                    <span>Learning Hub</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/bug-bounty')}>
+                  <Link to="/bug-bounty">
+                    <Target />
+                    <span>Bug Bounty</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/clients')}>
+                  <Link to="/clients">
+                    <Briefcase />
+                    <span>Client Portal</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
+        <SidebarGroup>
+          <SidebarGroupLabel>Enterprise</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/soc')}>
+                  <Link to="/soc">
+                    <MonitorSmartphone />
+                    <span>SOC</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/assets')}>
+                  <Link to="/assets">
+                    <Database />
+                    <span>Assets</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive('/compliance')}>
                   <Link to="/compliance">
-                    <ClipboardCheck />
+                    <CheckSquare />
                     <span>Compliance</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/threats')}>
-                  <Link to="/threats">
-                    <AlertCircle />
-                    <span>Threats</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
