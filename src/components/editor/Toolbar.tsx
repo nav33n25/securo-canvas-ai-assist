@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Editor, Element as SlateElement, Transforms } from 'slate';
 import { 
@@ -27,8 +26,22 @@ export interface ToolbarProps {
   showAI?: boolean;
 }
 
+type BlockType = 
+  | 'paragraph'
+  | 'heading-one'
+  | 'heading-two'
+  | 'heading-three'
+  | 'bulleted-list'
+  | 'numbered-list'
+  | 'list-item'
+  | 'block-quote'
+  | 'code-block'
+  | 'security-note'
+  | 'vulnerability'
+  | 'compliance'
+  | 'warning';
+
 const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
-  // Helper functions for formatting
   const toggleMark = (format: string) => {
     const isActive = isMarkActive(editor, format);
     if (isActive) {
@@ -43,7 +56,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
     return marks ? marks[format] === true : false;
   };
 
-  const toggleBlock = (format: string) => {
+  const toggleBlock = (format: BlockType) => {
     const isActive = isBlockActive(editor, format);
     
     Transforms.unwrapNodes(editor, {
@@ -55,7 +68,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
     });
 
     const newProperties: Partial<SlateElement> = {
-      type: isActive ? 'paragraph' : format,
+      type: isActive ? 'paragraph' as BlockType : format,
     };
 
     Transforms.setNodes(editor, newProperties);
@@ -66,7 +79,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
     }
   };
 
-  const isBlockActive = (editor: Editor, format: string) => {
+  const isBlockActive = (editor: Editor, format: BlockType) => {
     const [match] = Editor.nodes(editor, {
       match: n => 
         !Editor.isEditor(n) && 
@@ -77,7 +90,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
     return !!match;
   };
 
-  const insertSecurityBlock = (type: string) => {
+  const insertSecurityBlock = (type: BlockType) => {
     const securityBlock = {
       type,
       children: [{ text: '' }]
@@ -89,7 +102,6 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
   return (
     <div className="border rounded-md bg-background/95 p-1 flex flex-wrap items-center justify-between gap-1">
       <div className="flex items-center flex-wrap gap-1">
-        {/* Text formatting */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -156,7 +168,6 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
 
         <Separator orientation="vertical" className="h-6" />
 
-        {/* Headings */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -207,7 +218,6 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
 
         <Separator orientation="vertical" className="h-6" />
 
-        {/* Lists */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -242,7 +252,6 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
 
         <Separator orientation="vertical" className="h-6" />
 
-        {/* Quote */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -261,7 +270,6 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onToggleAI, showAI }) => {
 
         <Separator orientation="vertical" className="h-6" />
 
-        {/* Security blocks */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
