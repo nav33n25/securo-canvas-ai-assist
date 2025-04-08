@@ -94,7 +94,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange 
                 </div>
                 <Slate 
                   editor={editor} 
-                  value={value}
+                  initialValue={value}
                   onChange={handleChange}
                 >
                   <Editable
