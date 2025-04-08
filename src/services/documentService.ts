@@ -54,7 +54,7 @@ export async function getDocument(id: string) {
   return data as Document;
 }
 
-export async function createDocument(document: Partial<Document>) {
+export async function createDocument(document: Omit<Partial<Document>, 'title'> & { title: string }) {
   const { data, error } = await supabase
     .from('documents')
     .insert(document)
@@ -167,8 +167,8 @@ export async function createDocumentFromTemplate(templateId: string, title: stri
     is_template: false,
     template_category: template.category,
     version: 1,
-    status: 'draft'
+    status: 'draft' as const
   };
   
-  return createDocument(newDocument as Partial<Document>);
+  return createDocument(newDocument);
 }
