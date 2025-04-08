@@ -1,14 +1,18 @@
 
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   AlertCircle, 
   Box, 
   ClipboardCheck, 
   FileText, 
-  Lock, 
   Settings, 
   Shield, 
-  ShieldAlert
+  ShieldAlert,
+  FilePlus,
+  FileCheck,
+  Users,
+  Layout
 } from 'lucide-react';
 import {
   Sidebar as SidebarContainer,
@@ -24,6 +28,12 @@ import {
 } from '@/components/ui/sidebar';
 
 const Sidebar: React.FC = () => {
+  const location = useLocation();
+  
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
   return (
     <SidebarContainer>
       <SidebarHeader className="flex items-center gap-2 px-4">
@@ -33,23 +43,31 @@ const Sidebar: React.FC = () => {
       
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/">
-                    <FileText />
-                    <span>Documents</span>
-                  </a>
+                <SidebarMenuButton asChild isActive={isActive('/')}>
+                  <Link to="/">
+                    <Layout />
+                    <span>Dashboard</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/assets">
-                    <Box />
-                    <span>Assets</span>
-                  </a>
+                <SidebarMenuButton asChild isActive={location.pathname.startsWith('/document')}>
+                  <Link to="/">
+                    <FileText />
+                    <span>Documents</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/templates')}>
+                  <Link to="/templates">
+                    <FileCheck />
+                    <span>Templates</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -61,27 +79,27 @@ const Sidebar: React.FC = () => {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/vulnerabilities">
+                <SidebarMenuButton asChild isActive={isActive('/vulnerabilities')}>
+                  <Link to="/vulnerabilities">
                     <ShieldAlert />
                     <span>Vulnerabilities</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/compliance">
+                <SidebarMenuButton asChild isActive={isActive('/compliance')}>
+                  <Link to="/compliance">
                     <ClipboardCheck />
                     <span>Compliance</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/threats">
+                <SidebarMenuButton asChild isActive={isActive('/threats')}>
+                  <Link to="/threats">
                     <AlertCircle />
                     <span>Threats</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -92,11 +110,19 @@ const Sidebar: React.FC = () => {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <a href="/settings">
+            <SidebarMenuButton asChild isActive={isActive('/profile')}>
+              <Link to="/profile">
+                <Users />
+                <span>Profile</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive('/settings')}>
+              <Link to="/settings">
                 <Settings />
                 <span>Settings</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

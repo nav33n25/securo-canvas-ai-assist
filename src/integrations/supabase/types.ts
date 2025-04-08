@@ -9,7 +9,240 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      ai_suggestions: {
+        Row: {
+          applied: boolean
+          content: string
+          created_at: string
+          document_id: string
+          id: string
+          suggestion_type: string
+        }
+        Insert: {
+          applied?: boolean
+          content: string
+          created_at?: string
+          document_id: string
+          id?: string
+          suggestion_type: string
+        }
+        Update: {
+          applied?: boolean
+          content?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          suggestion_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          document_id: string
+          id: string
+          resolved: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          document_id: string
+          id?: string
+          resolved?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          resolved?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          category: string
+          content: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      document_versions: {
+        Row: {
+          change_summary: string | null
+          content: Json
+          created_at: string
+          document_id: string
+          id: string
+          user_id: string | null
+          version: number
+        }
+        Insert: {
+          change_summary?: string | null
+          content: Json
+          created_at?: string
+          document_id: string
+          id?: string
+          user_id?: string | null
+          version: number
+        }
+        Update: {
+          change_summary?: string | null
+          content?: Json
+          created_at?: string
+          document_id?: string
+          id?: string
+          user_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          is_template: boolean
+          status: string
+          tags: string[] | null
+          template_category: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+          version: number
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          is_template?: boolean
+          status?: string
+          tags?: string[] | null
+          template_category?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+          version?: number
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          is_template?: boolean
+          status?: string
+          tags?: string[] | null
+          template_category?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          job_title: string | null
+          last_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          id: string
+          job_title?: string | null
+          last_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          job_title?: string | null
+          last_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +251,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "editor" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +366,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["admin", "editor", "viewer"],
+    },
   },
 } as const

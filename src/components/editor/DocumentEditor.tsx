@@ -5,77 +5,45 @@ import { Slate, Editable, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
 import Toolbar from './Toolbar';
 import { renderElement, renderLeaf } from './RenderElements';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { withSecurityBlocks } from './withSecurityBlocks';
 import { Shield, Save } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
 
-const initialValue: Descendant[] = [
-  {
-    type: 'paragraph',
-    children: [{ text: 'Create your security documentation here...' }],
-  },
-];
+interface DocumentEditorProps {
+  initialValue: Descendant[];
+  onChange: (value: Descendant[]) => void;
+}
 
-const DocumentEditor: React.FC = () => {
+const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange }) => {
   const [value, setValue] = useState<Descendant[]>(initialValue);
-  const [documentTitle, setDocumentTitle] = useState('Untitled Security Document');
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   
   const editor = useMemo(() => {
     return withSecurityBlocks(withHistory(withReact(createEditor())));
   }, []);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDocumentTitle(e.target.value);
-  };
-
   const toggleAIAssistant = useCallback(() => {
     setShowAIAssistant(prev => !prev);
   }, []);
 
+  const handleChange = useCallback((newValue: Descendant[]) => {
+    setValue(newValue);
+    onChange(newValue);
+  }, [onChange]);
+
   return (
     <div className="flex flex-col h-full space-y-4">
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Shield className="h-5 w-5 text-secure" />
-              <input
-                type="text"
-                value={documentTitle}
-                onChange={handleTitleChange}
-                className="text-xl font-semibold bg-transparent border-none focus:outline-none focus:ring-0 w-full"
-              />
-            </div>
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline"
-                onClick={toggleAIAssistant}
-                className="text-secure-darker border-secure-darker hover:bg-secure/10"
-              >
-                AI Assistant
-              </Button>
-              <Button 
-                variant="default"
-                className="bg-secure hover:bg-secure-darker"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="flex gap-4 h-full">
             <div className={`flex-1 ${showAIAssistant ? 'w-2/3' : 'w-full'}`}>
-              <Toolbar editor={editor} />
+              <Toolbar editor={editor} onToggleAI={toggleAIAssistant} showAI={showAIAssistant} />
               <div className="border rounded-md p-4 mt-2 min-h-[500px] slate-content">
                 <Slate 
                   editor={editor} 
                   initialValue={value}
-                  onChange={newValue => setValue(newValue)}
+                  onChange={handleChange}
                 >
                   <Editable
                     renderElement={renderElement}
