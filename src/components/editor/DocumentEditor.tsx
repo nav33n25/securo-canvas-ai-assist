@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createEditor, Descendant } from 'slate';
 import { Slate, Editable, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { withSecurityBlocks } from './withSecurityBlocks';
 import { Shield, Save } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
+import { toast } from '@/components/ui/use-toast';
 
 interface DocumentEditorProps {
   initialValue: Descendant[];
@@ -16,20 +17,40 @@ interface DocumentEditorProps {
 }
 
 const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange }) => {
-  const [value, setValue] = useState<Descendant[]>(initialValue);
+  // Use initialValue from props, but fallback to a valid structure if it's empty
+  const defaultValue = useMemo(() => 
+    Array.isArray(initialValue) && initialValue.length > 0 
+      ? initialValue 
+      : [{ type: 'paragraph', children: [{ text: '' }] }], 
+  [initialValue]);
+  
+  const [value, setValue] = useState<Descendant[]>(defaultValue);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   
   const editor = useMemo(() => {
     return withSecurityBlocks(withHistory(withReact(createEditor())));
   }, []);
 
+  // If initialValue changes (e.g., when document is loaded), update the editor
+  useEffect(() => {
+    if (Array.isArray(initialValue) && initialValue.length > 0) {
+      setValue(initialValue);
+    }
+  }, [initialValue]);
+
   const toggleAIAssistant = useCallback(() => {
     setShowAIAssistant(prev => !prev);
   }, []);
 
   const handleChange = useCallback((newValue: Descendant[]) => {
-    setValue(newValue);
-    onChange(newValue);
+    // Validate the value to ensure it's properly structured
+    if (Array.isArray(newValue) && newValue.length > 0) {
+      setValue(newValue);
+      onChange(newValue);
+    } else {
+      console.error('Invalid editor value:', newValue);
+      // Prevent saving invalid content that could break the editor
+    }
   }, [onChange]);
 
   return (

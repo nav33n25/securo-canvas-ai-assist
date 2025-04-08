@@ -51,10 +51,20 @@ export async function getDocument(id: string) {
     throw new Error(error.message);
   }
 
+  // Ensure we have valid content structure
+  if (!data.content || !Array.isArray(data.content) || data.content.length === 0) {
+    data.content = [{ type: 'paragraph', children: [{ text: '' }] }];
+  }
+
   return data as Document;
 }
 
 export async function createDocument(document: Omit<Partial<Document>, 'title'> & { title: string }) {
+  // Ensure we have valid content structure
+  if (!document.content || !Array.isArray(document.content) || document.content.length === 0) {
+    document.content = [{ type: 'paragraph', children: [{ text: '' }] }];
+  }
+
   const { data, error } = await supabase
     .from('documents')
     .insert(document)
@@ -69,9 +79,13 @@ export async function createDocument(document: Omit<Partial<Document>, 'title'> 
 }
 
 export async function updateDocument(id: string, document: Partial<Document>) {
-  // First, create a version record
-  const currentDoc = await getDocument(id);
-  
+  // Validate content before saving
+  if (document.content !== undefined) {
+    if (!Array.isArray(document.content) || document.content.length === 0) {
+      document.content = [{ type: 'paragraph', children: [{ text: '' }] }];
+    }
+  }
+
   // Get current user to ensure proper RLS policy compliance
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
@@ -80,34 +94,42 @@ export async function updateDocument(id: string, document: Partial<Document>) {
     throw new Error("Authentication required to update documents");
   }
   
-  // Create version with explicit user_id to satisfy RLS policies
-  await supabase
-    .from('document_versions')
-    .insert({
-      document_id: id,
-      content: currentDoc.content,
-      version: currentDoc.version,
-      user_id: userId,
-      change_summary: 'Document updated'
-    });
-  
-  // Now update the document
-  const { data, error } = await supabase
-    .from('documents')
-    .update({
-      ...document,
-      version: currentDoc.version + 1,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', id)
-    .select()
-    .single();
+  try {
+    // First, get current document
+    const currentDoc = await getDocument(id);
+    
+    // Create version with explicit user_id to satisfy RLS policies
+    await supabase
+      .from('document_versions')
+      .insert({
+        document_id: id,
+        content: currentDoc.content,
+        version: currentDoc.version,
+        user_id: userId,
+        change_summary: 'Document updated'
+      });
+    
+    // Now update the document
+    const { data, error } = await supabase
+      .from('documents')
+      .update({
+        ...document,
+        version: currentDoc.version + 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data as Document;
+  } catch (error: any) {
+    console.error("Error updating document:", error);
+    throw error;
   }
-
-  return data as Document;
 }
 
 export async function deleteDocument(id: string) {

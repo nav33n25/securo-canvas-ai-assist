@@ -19,12 +19,14 @@ const DocumentPage = () => {
   const queryClient = useQueryClient();
   const [documentTitle, setDocumentTitle] = useState('');
   const [editorContent, setEditorContent] = useState<Descendant[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
   
   // Get document query
-  const { data: document, isLoading, error } = useQuery({
+  const { data: document, isLoading, error, refetch } = useQuery({
     queryKey: ['document', id],
     queryFn: () => getDocument(id!),
-    enabled: !!id,
+    enabled: !!id && !!user,
+    retry: 1,
   });
 
   // Update document mutation
@@ -40,12 +42,14 @@ const DocumentPage = () => {
         title: "Document saved",
         description: "Your changes have been saved successfully.",
       });
+      setHasChanges(false);
     },
     onError: (error: any) => {
+      console.error("Save error:", error);
       toast({
         variant: "destructive",
         title: "Save failed",
-        description: error.message,
+        description: error.message || "Failed to save document. Please try again.",
       });
     }
   });
@@ -54,9 +58,25 @@ const DocumentPage = () => {
   useEffect(() => {
     if (document) {
       setDocumentTitle(document.title);
-      setEditorContent(document.content);
+      
+      // Ensure document content is valid
+      if (Array.isArray(document.content) && document.content.length > 0) {
+        setEditorContent(document.content);
+      } else {
+        // Set default content if the document content is invalid
+        setEditorContent([{ type: 'paragraph', children: [{ text: '' }] }]);
+      }
+      setHasChanges(false);
     }
   }, [document]);
+
+  // Handle content changes
+  const handleContentChange = useCallback((newContent: Descendant[]) => {
+    if (Array.isArray(newContent) && newContent.length > 0) {
+      setEditorContent(newContent);
+      setHasChanges(true);
+    }
+  }, []);
 
   // Handle saving the document
   const handleSave = useCallback(() => {
@@ -69,13 +89,31 @@ const DocumentPage = () => {
       return;
     }
 
+    if (!Array.isArray(editorContent) || editorContent.length === 0) {
+      console.error("Invalid editor content:", editorContent);
+      toast({
+        variant: "destructive",
+        title: "Cannot save",
+        description: "The document content is invalid. Please refresh and try again.",
+      });
+      return;
+    }
+
     saveDocument();
-  }, [user, saveDocument]);
+  }, [user, saveDocument, editorContent]);
   
   // Handle title change
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDocumentTitle(e.target.value);
+    setHasChanges(true);
   };
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!user && !isLoading) {
+      navigate('/auth');
+    }
+  }, [user, isLoading, navigate]);
 
   if (error) {
     return (
@@ -87,7 +125,7 @@ const DocumentPage = () => {
           </div>
           <Button 
             variant="outline" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/documents')}
             className="mt-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -105,7 +143,7 @@ const DocumentPage = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/documents')}
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
@@ -126,11 +164,11 @@ const DocumentPage = () => {
               </div>
               <Button 
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || !hasChanges}
                 className="bg-secure hover:bg-secure-darker"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving ? 'Saving...' : hasChanges ? 'Save Changes' : 'Saved'}
               </Button>
             </div>
           )}
@@ -146,7 +184,7 @@ const DocumentPage = () => {
         ) : (
           <DocumentEditor 
             initialValue={editorContent} 
-            onChange={setEditorContent}
+            onChange={handleContentChange}
           />
         )}
       </div>
