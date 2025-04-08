@@ -60,8 +60,8 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor }) => {
       editor,
       { type: isActive ? 'paragraph' : format } as Partial<CustomElement>,
       { 
-        match: (n): n is CustomElement => {
-          return Editor.isBlock(editor, n) && SlateElement.isElement(n);
+        match: (n): n is SlateElement => {
+          return !Editor.isEditor(n) && SlateElement.isElement(n);
         }
       }
     );
