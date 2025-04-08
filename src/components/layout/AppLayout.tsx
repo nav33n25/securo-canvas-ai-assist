@@ -1,26 +1,48 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import CommandPalette from '@/components/ui/command-palette';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    // Check for Command/Control + K
+    if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+      event.preventDefault();
+      setCommandPaletteOpen(true);
+    }
+  };
+
+  React.useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <ThemeProvider>
       <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background text-foreground">
           <Sidebar />
           <div className="flex flex-col flex-1 w-full">
-            <Navbar />
+            <Navbar onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
             <main className="flex-1 overflow-auto p-4 md:p-6">
               {children}
             </main>
           </div>
+          <CommandPalette 
+            open={commandPaletteOpen}
+            onOpenChange={setCommandPaletteOpen}
+          />
         </div>
       </SidebarProvider>
     </ThemeProvider>

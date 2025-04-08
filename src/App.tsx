@@ -27,6 +27,8 @@ import WorkspaceSettingsPage from "./pages/workspace-settings";
 import AIConfigPage from "./pages/ai-config";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import SecurityPostureDashboard from "./components/dashboard/SecurityPosture";
+import TeamDashboardPage from "./pages/dashboard/team";
 
 const queryClient = new QueryClient();
 
@@ -41,28 +43,38 @@ const App = () => (
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/auth" element={<Auth />} />
+              
+              {/* Dashboard Routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/security" element={<ProtectedRoute><SecurityPostureDashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/team" element={<ProtectedRoute><TeamDashboardPage /></ProtectedRoute>} />
+              
+              {/* Document Routes */}
               <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
               <Route path="/document/:id" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/templates" element={<ProtectedRoute><TemplatesPage /></ProtectedRoute>} />
+              <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
+              
+              {/* Professional Routes */}
               <Route path="/learning" element={<ProtectedRoute><LearningHubPage /></ProtectedRoute>} />
               <Route path="/bug-bounty" element={<ProtectedRoute><BugBountyPage /></ProtectedRoute>} />
-              <Route path="/compliance" element={<ProtectedRoute><CompliancePage /></ProtectedRoute>} />
-              {/* Knowledge Base */}
-              <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
-              {/* Client Portal */}
               <Route path="/clients" element={<ProtectedRoute><ClientPortalPage /></ProtectedRoute>} />
-              {/* Enterprise Pages */}
+              
+              {/* Enterprise Routes */}
               <Route path="/soc" element={<ProtectedRoute><SOCPage /></ProtectedRoute>} />
               <Route path="/assets" element={<ProtectedRoute><AssetsPage /></ProtectedRoute>} />
-              {/* Specialized Security Team Pages */}
+              <Route path="/compliance" element={<ProtectedRoute><CompliancePage /></ProtectedRoute>} />
+              
+              {/* Security Team Routes */}
               <Route path="/red-team" element={<ProtectedRoute><RedTeamPage /></ProtectedRoute>} />
               <Route path="/threat-intel" element={<ProtectedRoute><ThreatIntelPage /></ProtectedRoute>} />
               <Route path="/ticketing" element={<ProtectedRoute><TicketingPage /></ProtectedRoute>} />
-              {/* Administration Pages */}
+              
+              {/* Administration Routes */}
               <Route path="/workspace-settings" element={<ProtectedRoute><WorkspaceSettingsPage /></ProtectedRoute>} />
               <Route path="/ai-config" element={<ProtectedRoute><AIConfigPage /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
