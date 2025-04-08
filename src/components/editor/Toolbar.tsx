@@ -33,7 +33,9 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor }) => {
   const isBlockActive = (format: string) => {
     const nodeEntries = Editor.nodes(editor, {
       match: n => 
-        !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === format,
+        !Editor.isEditor(n) && 
+        SlateElement.isElement(n) && 
+        (n as any).type === format,
     });
     
     const match = Array.from(nodeEntries)[0];

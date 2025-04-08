@@ -5,7 +5,7 @@ import { RenderElementProps, RenderLeafProps } from 'slate-react';
 export const renderElement = (props: RenderElementProps) => {
   const { attributes, children, element } = props;
 
-  switch (element.type) {
+  switch ((element as any).type) {
     case 'heading-one':
       return <h1 {...attributes}>{children}</h1>;
     case 'heading-two':

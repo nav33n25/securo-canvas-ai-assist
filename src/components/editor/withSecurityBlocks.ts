@@ -10,8 +10,9 @@ export const withSecurityBlocks = (editor: Editor): Editor => {
     if (selection) {
       const nodeEntries = Editor.nodes(editor, {
         match: n => 
-          !Editor.isEditor(n) && Element.isElement(n) && 
-          ['security-note', 'vulnerability', 'compliance', 'warning'].includes(n.type as string),
+          !Editor.isEditor(n) && 
+          Element.isElement(n) && 
+          ['security-note', 'vulnerability', 'compliance', 'warning'].includes((n as any).type as string),
         at: selection,
       });
       
@@ -41,7 +42,7 @@ export const withSecurityBlocks = (editor: Editor): Editor => {
   const normalizeNode = editor.normalizeNode;
   editor.normalizeNode = ([node, path]) => {
     if (Element.isElement(node) && 
-        ['security-note', 'vulnerability', 'compliance', 'warning'].includes(node.type as string)) {
+        ['security-note', 'vulnerability', 'compliance', 'warning'].includes((node as any).type as string)) {
       // Ensure security blocks have at least one paragraph child
       if (node.children.length === 0) {
         Transforms.insertNodes(
