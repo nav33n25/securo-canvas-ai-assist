@@ -16,6 +16,15 @@ import TemplatesPage from "./pages/templates";
 import LearningHubPage from "./pages/learning";
 import BugBountyPage from "./pages/bug-bounty";
 import CompliancePage from "./pages/compliance";
+import KnowledgeBasePage from "./pages/knowledge-base";
+import ClientPortalPage from "./pages/client-portal";
+import SOCPage from "./pages/soc";
+import AssetsPage from "./pages/assets";
+import RedTeamPage from "./pages/red-team";
+import ThreatIntelPage from "./pages/threat-intel";
+import TicketingPage from "./pages/ticketing";
+import WorkspaceSettingsPage from "./pages/workspace-settings";
+import AIConfigPage from "./pages/ai-config";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -40,6 +49,20 @@ const App = () => (
               <Route path="/learning" element={<ProtectedRoute><LearningHubPage /></ProtectedRoute>} />
               <Route path="/bug-bounty" element={<ProtectedRoute><BugBountyPage /></ProtectedRoute>} />
               <Route path="/compliance" element={<ProtectedRoute><CompliancePage /></ProtectedRoute>} />
+              {/* Knowledge Base */}
+              <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
+              {/* Client Portal */}
+              <Route path="/clients" element={<ProtectedRoute><ClientPortalPage /></ProtectedRoute>} />
+              {/* Enterprise Pages */}
+              <Route path="/soc" element={<ProtectedRoute><SOCPage /></ProtectedRoute>} />
+              <Route path="/assets" element={<ProtectedRoute><AssetsPage /></ProtectedRoute>} />
+              {/* Specialized Security Team Pages */}
+              <Route path="/red-team" element={<ProtectedRoute><RedTeamPage /></ProtectedRoute>} />
+              <Route path="/threat-intel" element={<ProtectedRoute><ThreatIntelPage /></ProtectedRoute>} />
+              <Route path="/ticketing" element={<ProtectedRoute><TicketingPage /></ProtectedRoute>} />
+              {/* Administration Pages */}
+              <Route path="/workspace-settings" element={<ProtectedRoute><WorkspaceSettingsPage /></ProtectedRoute>} />
+              <Route path="/ai-config" element={<ProtectedRoute><AIConfigPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

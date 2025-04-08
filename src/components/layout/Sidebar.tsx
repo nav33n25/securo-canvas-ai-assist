@@ -21,7 +21,12 @@ import {
   CheckSquare,
   Sword,
   Radio,
-  Ticket
+  Ticket,
+  Book,
+  Server,
+  Lock,
+  Cog,
+  Bot
 } from 'lucide-react';
 import {
   Sidebar as SidebarContainer,
@@ -56,8 +61,8 @@ const Sidebar: React.FC = () => {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/')}>
-                  <Link to="/">
+                <SidebarMenuButton asChild isActive={isActive('/dashboard')}>
+                  <Link to="/dashboard">
                     <Layout />
                     <span>Dashboard</span>
                   </Link>
@@ -76,6 +81,14 @@ const Sidebar: React.FC = () => {
                   <Link to="/templates">
                     <FileCheck />
                     <span>Templates</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/knowledge-base')}>
+                  <Link to="/knowledge-base">
+                    <Book />
+                    <span>Knowledge Base</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -140,6 +153,62 @@ const Sidebar: React.FC = () => {
                   <Link to="/compliance">
                     <CheckSquare />
                     <span>Compliance</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Security Teams</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/red-team')}>
+                  <Link to="/red-team">
+                    <Sword />
+                    <span>Red Team</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/threat-intel')}>
+                  <Link to="/threat-intel">
+                    <Radio />
+                    <span>Threat Intel</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/ticketing')}>
+                  <Link to="/ticketing">
+                    <Ticket />
+                    <span>Security Tickets</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Administration</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/workspace-settings')}>
+                  <Link to="/workspace-settings">
+                    <Cog />
+                    <span>Workspace Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/ai-config')}>
+                  <Link to="/ai-config">
+                    <Bot />
+                    <span>AI Configuration</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
