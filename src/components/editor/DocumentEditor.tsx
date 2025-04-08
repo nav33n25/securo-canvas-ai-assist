@@ -34,12 +34,21 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange 
 
   return (
     <div className="flex flex-col h-full space-y-4">
-      <Card>
+      <Card className="shadow-md border-secure/20 dark:bg-background/95">
         <CardContent className="p-0">
           <div className="flex gap-4 h-full">
             <div className={`flex-1 ${showAIAssistant ? 'w-2/3' : 'w-full'}`}>
               <Toolbar editor={editor} onToggleAI={toggleAIAssistant} showAI={showAIAssistant} />
-              <div className="border rounded-md p-4 mt-2 min-h-[500px] slate-content">
+              <div className="border rounded-md p-4 mt-2 min-h-[500px] slate-content bg-white dark:bg-slate-900 shadow-inner">
+                <div className="mb-4 px-4 py-2 bg-secure/10 rounded-md border border-secure/20">
+                  <div className="flex items-center gap-2 text-secure">
+                    <Shield size={16} />
+                    <span className="text-sm font-medium">Secure Document Editor</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use security blocks to highlight important security information
+                  </p>
+                </div>
                 <Slate 
                   editor={editor} 
                   initialValue={value}

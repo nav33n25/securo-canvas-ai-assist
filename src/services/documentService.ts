@@ -72,13 +72,22 @@ export async function updateDocument(id: string, document: Partial<Document>) {
   // First, create a version record
   const currentDoc = await getDocument(id);
   
+  // Get current user to ensure proper RLS policy compliance
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  
+  if (!userId) {
+    throw new Error("Authentication required to update documents");
+  }
+  
+  // Create version with explicit user_id to satisfy RLS policies
   await supabase
     .from('document_versions')
     .insert({
       document_id: id,
       content: currentDoc.content,
       version: currentDoc.version,
-      user_id: currentDoc.user_id,
+      user_id: userId,
       change_summary: 'Document updated'
     });
   
