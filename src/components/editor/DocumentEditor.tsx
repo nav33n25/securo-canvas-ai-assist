@@ -11,10 +11,13 @@ import { Shield } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
 import { toast } from '@/components/ui/use-toast';
 import { CustomElement } from '@/types/slate';
+import { Button } from '@/components/ui/button';
 
 interface DocumentEditorProps {
   initialValue: Descendant[];
   onChange: (value: Descendant[]) => void;
+  title?: string;
+  onSave?: () => void;
 }
 
 // Default valid empty slate content
@@ -23,7 +26,12 @@ const emptyEditorContent: Descendant[] = [{
   children: [{ text: '' }] 
 }];
 
-const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange }) => {
+const DocumentEditor: React.FC<DocumentEditorProps> = ({ 
+  initialValue, 
+  onChange, 
+  title = "Untitled Security Document",
+  onSave 
+}) => {
   // Use initialValue from props, but fallback to empty content if it's empty or invalid
   const defaultValue = useMemo(() => {
     if (Array.isArray(initialValue) && initialValue.length > 0) {
@@ -77,21 +85,35 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange 
 
   return (
     <div className="flex flex-col h-full space-y-4">
-      <Card className="shadow-md border-secure/20 dark:bg-background/95">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2 text-secure">
+          <Shield className="h-6 w-6" />
+          <h1 className="text-2xl font-semibold">{title}</h1>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button 
+            onClick={toggleAIAssistant}
+            variant={showAIAssistant ? "default" : "outline"}
+            className={showAIAssistant ? "bg-secure hover:bg-secure-darker" : ""}
+          >
+            AI Assistant
+          </Button>
+          
+          {onSave && (
+            <Button onClick={onSave} className="bg-blue-500 hover:bg-blue-600">
+              Save
+            </Button>
+          )}
+        </div>
+      </div>
+      
+      <Card className="shadow-md border-secure/20 bg-slate-900 text-white">
         <CardContent className="p-0">
           <div className="flex gap-4 h-full">
             <div className={`flex-1 ${showAIAssistant ? 'w-2/3' : 'w-full'}`}>
               <Toolbar editor={editor} onToggleAI={toggleAIAssistant} showAI={showAIAssistant} />
-              <div className="border rounded-md p-4 mt-2 min-h-[500px] slate-content bg-white dark:bg-slate-900 shadow-inner">
-                <div className="mb-4 px-4 py-2 bg-secure/10 rounded-md border border-secure/20">
-                  <div className="flex items-center gap-2 text-secure">
-                    <Shield size={16} />
-                    <span className="text-sm font-medium">Secure Document Editor</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Use security blocks to highlight important security information
-                  </p>
-                </div>
+              <div className="border border-slate-700 rounded-md p-4 mt-2 min-h-[500px] slate-content bg-slate-900 shadow-inner">
                 <Slate 
                   editor={editor} 
                   initialValue={value}
@@ -100,10 +122,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialValue, onChange 
                   <Editable
                     renderElement={renderElement}
                     renderLeaf={renderLeaf}
-                    placeholder="Begin documenting your security practices..."
+                    placeholder="Create your security documentation here..."
                     spellCheck
                     autoFocus
-                    className="min-h-[500px] focus:outline-none"
+                    className="min-h-[500px] focus:outline-none text-slate-100"
                   />
                 </Slate>
               </div>

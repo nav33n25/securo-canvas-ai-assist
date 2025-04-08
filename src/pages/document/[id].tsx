@@ -10,7 +10,7 @@ import DocumentEditor from '@/components/editor/DocumentEditor';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Descendant } from 'slate';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 const DocumentPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -148,30 +148,6 @@ const DocumentPage = () => {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
-          
-          {isLoading ? (
-            <Skeleton className="h-10 w-64" />
-          ) : (
-            <div className="flex-1 flex justify-between items-center">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={documentTitle}
-                  onChange={handleTitleChange}
-                  className="text-xl font-semibold bg-transparent border-none focus:outline-none focus:ring-0 w-full"
-                  placeholder="Document Title"
-                />
-              </div>
-              <Button 
-                onClick={handleSave}
-                disabled={isSaving || !hasChanges}
-                className="bg-secure hover:bg-secure-darker"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isSaving ? 'Saving...' : hasChanges ? 'Save Changes' : 'Saved'}
-              </Button>
-            </div>
-          )}
         </div>
         
         {isLoading ? (
@@ -182,10 +158,23 @@ const DocumentPage = () => {
             <Skeleton className="h-16 w-full" />
           </div>
         ) : (
-          <DocumentEditor 
-            initialValue={editorContent} 
-            onChange={handleContentChange}
-          />
+          <>
+            <div className="mb-4">
+              <input
+                type="text"
+                value={documentTitle}
+                onChange={handleTitleChange}
+                className="text-xl font-semibold bg-transparent border-none focus:outline-none focus:ring-0 w-full"
+                placeholder="Document Title"
+              />
+            </div>
+            <DocumentEditor 
+              initialValue={editorContent} 
+              onChange={handleContentChange}
+              title={documentTitle || "Untitled Security Document"}
+              onSave={handleSave}
+            />
+          </>
         )}
       </div>
     </AppLayout>

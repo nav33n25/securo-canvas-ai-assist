@@ -23,7 +23,7 @@ import {
   Send, 
   ShieldAlert
 } from 'lucide-react';
-import { SECURITY_PROMPTS } from '@/services/perplexityAI';
+import { SECURITY_PROMPTS, queryPerplexityAI } from '@/services/perplexityAI';
 
 interface AIAssistantPanelProps {
   editor: Editor;
@@ -95,7 +95,18 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ editor }) => {
     
     try {
       // This is a mock response since we don't want to make actual API calls in this demo
-      // In a real implementation, you would call queryPerplexityAI here
+      // In a real implementation, you would uncomment and use this call
+      /*
+      const result = await queryPerplexityAI(
+        query,
+        apiKey,
+        "You are a cybersecurity expert assistant that helps with security documentation, threat analysis, and compliance guidance."
+      );
+      const aiResponse = result.choices[0].message.content;
+      setResponse(aiResponse);
+      */
+      
+      // Mock response for demo purposes
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       const mockResponse = `# Security Analysis
@@ -153,51 +164,52 @@ This analysis is based on current best practices in cybersecurity.`;
   };
   
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col bg-slate-800 border-slate-700 text-slate-100">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <BrainCircuit className="h-5 w-5 text-secure" />
+        <CardTitle className="flex items-center gap-2 text-secure">
+          <BrainCircuit className="h-5 w-5" />
           Security AI Assistant
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-slate-300">
           Get AI-powered security guidance for your documentation
         </CardDescription>
       </CardHeader>
       
       <CardContent className="flex-1 overflow-auto">
         <Tabs defaultValue="ask">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ask">Ask AI</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-slate-700">
+            <TabsTrigger value="ask" className="data-[state=active]:bg-secure">Ask AI</TabsTrigger>
+            <TabsTrigger value="templates" className="data-[state=active]:bg-secure">Templates</TabsTrigger>
           </TabsList>
           
           <TabsContent value="ask" className="space-y-4 mt-2">
             <div className="space-y-2">
-              <Label htmlFor="api-key">Perplexity AI API Key</Label>
+              <Label htmlFor="api-key" className="text-slate-300">Perplexity AI API Key</Label>
               <Input 
                 id="api-key" 
                 type="password" 
                 placeholder="Enter your API key" 
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
+                className="bg-slate-900 border-slate-700 text-slate-100"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="query">Security Query</Label>
+              <Label htmlFor="query" className="text-slate-300">Security Query</Label>
               <Textarea 
                 id="query" 
                 placeholder="Ask about security best practices, compliance requirements, threat modeling, etc."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="resize-none h-24"
+                className="resize-none h-24 bg-slate-900 border-slate-700 text-slate-100"
               />
             </div>
             
             {selectedTemplate && (
-              <div className="bg-muted p-2 rounded-md text-xs">
-                <p className="font-semibold">{selectedTemplate.title}</p>
-                <p>{selectedTemplate.description}</p>
+              <div className="bg-slate-700 p-2 rounded-md text-xs">
+                <p className="font-semibold text-slate-200">{selectedTemplate.title}</p>
+                <p className="text-slate-300">{selectedTemplate.description}</p>
               </div>
             )}
           </TabsContent>
@@ -208,14 +220,14 @@ This analysis is based on current best practices in cybersecurity.`;
                 <Button 
                   key={idx}
                   variant="outline" 
-                  className="w-full justify-start text-left h-auto py-2 px-3"
+                  className="w-full justify-start text-left h-auto py-2 px-3 bg-slate-900 border-slate-700 hover:bg-slate-800 text-slate-100"
                   onClick={() => selectTemplate(template)}
                 >
                   <div className="flex items-start gap-2">
                     <span className="mt-0.5">{template.icon}</span>
                     <div>
                       <div className="font-medium">{template.title}</div>
-                      <div className="text-xs text-muted-foreground">{template.description}</div>
+                      <div className="text-xs text-slate-400">{template.description}</div>
                     </div>
                   </div>
                 </Button>
@@ -226,19 +238,20 @@ This analysis is based on current best practices in cybersecurity.`;
         
         {response && (
           <div className="mt-4 space-y-2">
-            <Label>AI Response</Label>
-            <div className="bg-muted p-3 rounded-md text-sm whitespace-pre-wrap max-h-48 overflow-y-auto">
+            <Label className="text-slate-300">AI Response</Label>
+            <div className="bg-slate-900 p-3 rounded-md text-sm whitespace-pre-wrap max-h-48 overflow-y-auto text-slate-200">
               {response}
             </div>
           </div>
         )}
       </CardContent>
       
-      <CardFooter className="border-t pt-4 flex justify-between">
+      <CardFooter className="border-t border-slate-700 pt-4 flex justify-between">
         <Button 
           variant="outline" 
           onClick={insertResponseToEditor}
           disabled={!response || loading}
+          className="bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800"
         >
           Insert to Document
         </Button>
@@ -246,7 +259,7 @@ This analysis is based on current best practices in cybersecurity.`;
         <Button 
           onClick={handleSendQuery} 
           disabled={loading || !query.trim()}
-          className="bg-secure hover:bg-secure-darker"
+          className="bg-secure hover:bg-secure/90"
         >
           {loading ? (
             <>
