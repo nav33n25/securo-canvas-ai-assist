@@ -62,7 +62,7 @@ export const withSecurityBlocks = (editor: Editor): Editor => {
         
         Transforms.setNodes(
           editor,
-          { className },
+          { className } as Partial<Element>,
           { at: path }
         );
       }
