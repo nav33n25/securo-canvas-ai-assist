@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDocument, updateDocument } from '@/services/documentService';
@@ -9,7 +9,7 @@ import DocumentEditor from '@/components/editor/DocumentEditor';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Descendant } from 'slate';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 
 const DocumentPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +20,8 @@ const DocumentPage = () => {
   const [editorContent, setEditorContent] = useState<Descendant[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimerRef = useRef<number | null>(null);
+  const initialLoadCompleted = useRef(false);
   
   // Get document query
   const { data: document, isLoading, error, refetch } = useQuery({
@@ -33,13 +35,24 @@ const DocumentPage = () => {
   const { mutate: saveDocument, isPending: isSaving } = useMutation({
     mutationFn: () => {
       // Create a deep copy of the content to ensure we're not affected by references
-      const contentCopy = JSON.parse(JSON.stringify(editorContent));
-      
-      console.log('Saving document with deep copied content:', contentCopy);
-      return updateDocument(id!, {
-        title: documentTitle,
-        content: contentCopy,
-      });
+      try {
+        console.log('Preparing to save document', {
+          id,
+          title: documentTitle,
+          contentLength: editorContent.length
+        });
+        
+        // Create a deep copy to ensure we're not affected by references
+        const contentCopy = JSON.parse(JSON.stringify(editorContent));
+        
+        return updateDocument(id!, {
+          title: documentTitle,
+          content: contentCopy,
+        });
+      } catch (err) {
+        console.error('Error preparing content for save:', err);
+        throw new Error('Failed to prepare document for saving');
+      }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['document', id] });
@@ -64,13 +77,16 @@ const DocumentPage = () => {
 
   // Set initial document data
   useEffect(() => {
-    if (document) {
-      console.log('Document loaded:', document);
+    if (document && !initialLoadCompleted.current) {
+      console.log('Document loaded, setting initial data:', document);
       setDocumentTitle(document.title);
       
       // Ensure document content is valid
       if (Array.isArray(document.content) && document.content.length > 0) {
-        console.log('Setting editor content:', document.content);
+        console.log('Setting editor content:', 
+          document.content.slice(0, 2), 
+          `(${document.content.length} nodes total)`
+        );
         setEditorContent(document.content);
       } else {
         // Set default content if the document content is invalid
@@ -84,8 +100,40 @@ const DocumentPage = () => {
       }
       
       setHasChanges(false);
+      initialLoadCompleted.current = true;
     }
   }, [document]);
+
+  // Clear auto-save timer when component unmounts
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current !== null) {
+        window.clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Setup auto-save functionality
+  const setupAutoSave = useCallback(() => {
+    // Clear any existing timer
+    if (autoSaveTimerRef.current !== null) {
+      window.clearTimeout(autoSaveTimerRef.current);
+    }
+    
+    // Only set up auto-save if there are changes to save
+    if (hasChanges && user && id) {
+      console.log('Setting up auto-save timer');
+      autoSaveTimerRef.current = window.setTimeout(() => {
+        console.log('Auto-saving document');
+        saveDocument();
+      }, 60000); // Auto-save after 60 seconds of inactivity
+    }
+  }, [hasChanges, user, id, saveDocument]);
+
+  // Set up auto-save whenever hasChanges changes
+  useEffect(() => {
+    setupAutoSave();
+  }, [hasChanges, setupAutoSave]);
 
   // Handle content changes
   const handleContentChange = useCallback((newContent: Descendant[]) => {
@@ -93,13 +141,15 @@ const DocumentPage = () => {
       console.log('Content changed in document page, length:', newContent.length);
       
       // Ensure we're setting a new reference to trigger state updates
-      const contentCopy = JSON.parse(JSON.stringify(newContent));
-      setEditorContent(contentCopy);
+      setEditorContent(newContent);
       setHasChanges(true);
+      
+      // Reset auto-save timer
+      setupAutoSave();
     } else {
       console.error('Invalid content received from editor:', newContent);
     }
-  }, []);
+  }, [setupAutoSave]);
 
   // Handle saving the document
   const handleSave = useCallback(() => {
@@ -112,7 +162,7 @@ const DocumentPage = () => {
       return;
     }
 
-    if (!Array.isArray(editorContent) || editorContent.length === 0) {
+    if (!editorContent || !Array.isArray(editorContent) || editorContent.length === 0) {
       console.error("Invalid editor content:", editorContent);
       toast({
         variant: "destructive",
@@ -123,29 +173,22 @@ const DocumentPage = () => {
     }
 
     // Log the content being saved
-    console.log('Saving document, content length:', editorContent.length);
-    console.log('Content sample:', editorContent[0]);
+    console.log('Manual save triggered, content length:', editorContent.length);
     
-    try {
-      // Make sure we can stringify and parse the content before saving
-      const contentCopy = JSON.parse(JSON.stringify(editorContent));
-      
-      // Use mutate to save the document with the content copy
-      saveDocument();
-    } catch (err) {
-      console.error('Error preparing content for save:', err);
-      toast({
-        variant: "destructive",
-        title: "Save error",
-        description: "There was an error preparing your document for saving. Please try again.",
-      });
+    // Clear auto-save timer when manually saving
+    if (autoSaveTimerRef.current !== null) {
+      window.clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
     }
+    
+    saveDocument();
   }, [user, saveDocument, editorContent]);
   
   // Handle title change
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDocumentTitle(e.target.value);
     setHasChanges(true);
+    setupAutoSave();
   };
 
   // Prompt before leaving if there are unsaved changes
@@ -192,7 +235,7 @@ const DocumentPage = () => {
   return (
     <AppLayout>
       <div className="container mx-auto py-4">
-        <div className="flex items-center mb-4">
+        <div className="flex items-center justify-between mb-4">
           <Button 
             variant="outline" 
             size="sm" 
@@ -201,6 +244,18 @@ const DocumentPage = () => {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
+          
+          {!isLoading && (
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !hasChanges}
+              className="bg-blue-500 hover:bg-blue-600"
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-1" />
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          )}
         </div>
         
         {isLoading ? (

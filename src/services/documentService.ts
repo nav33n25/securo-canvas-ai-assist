@@ -40,6 +40,8 @@ export async function getDocuments() {
 }
 
 export async function getDocument(id: string) {
+  console.log('getDocument called for id:', id);
+  
   const { data, error } = await supabase
     .from('documents')
     .select('*')
@@ -48,27 +50,23 @@ export async function getDocument(id: string) {
 
   if (error) {
     console.error('Error fetching document:', error);
-    throw new Error(error.message);
+    throw new Error(error.message || 'Failed to fetch document');
   }
 
-  // Ensure we have valid content structure
-  if (!data.content || !Array.isArray(data.content) || data.content.length === 0) {
-    console.warn('Document had invalid content, setting default content');
-    data.content = [{ type: 'paragraph', children: [{ text: '' }] }];
-  } else {
-    // Ensure content is properly parsed when retrieved
-    try {
-      // Convert to string and back to ensure we have proper JS objects
-      const contentString = JSON.stringify(data.content);
-      data.content = JSON.parse(contentString);
-      console.log('Retrieved and parsed document content:', data.content);
-    } catch (err) {
-      console.error('Error parsing document content:', err);
-      data.content = [{ type: 'paragraph', children: [{ text: '' }] }];
-    }
+  if (!data) {
+    throw new Error('Document not found');
   }
+
+  // Ensure we have valid content structure using our sanitize function
+  data.content = sanitizeContent(data.content);
   
-  console.log('Retrieved document:', data);
+  console.log('Retrieved document:', {
+    id: data.id,
+    title: data.title,
+    contentLength: data.content?.length || 0,
+    version: data.version
+  });
+  
   return data as Document;
 }
 
@@ -93,26 +91,108 @@ export async function createDocument(document: Omit<Partial<Document>, 'title'> 
   return data as Document;
 }
 
-export async function updateDocument(id: string, document: Partial<Document>) {
-  // Validate content before saving
-  if (document.content !== undefined) {
-    if (!Array.isArray(document.content) || document.content.length === 0) {
-      document.content = [{ type: 'paragraph', children: [{ text: '' }] }];
+// Helper function to ensure content is properly structured
+function sanitizeContent(content: any): any[] {
+  // If content isn't an array, create a default empty document
+  if (!Array.isArray(content) || content.length === 0) {
+    return [{ type: 'paragraph', children: [{ text: '' }] }];
+  }
+
+  try {
+    // First convert to string and back to lose any non-serializable artifacts
+    const contentString = JSON.stringify(content);
+    let parsed = JSON.parse(contentString);
+    
+    // Ensure the result is an array
+    if (!Array.isArray(parsed)) {
+      console.error('Content is not an array after parsing:', parsed);
+      return [{ type: 'paragraph', children: [{ text: '' }] }];
     }
     
-    // Ensure proper content serialization before saving
-    // Deep clone the content to prevent reference issues and ensure all slate nodes are properly serialized
+    // Validate and fix each node in the content
+    parsed = parsed.map(node => {
+      // Ensure node is an object
+      if (typeof node !== 'object' || node === null) {
+        return { type: 'paragraph', children: [{ text: '' }] };
+      }
+      
+      // Ensure node has a type
+      if (typeof node.type !== 'string') {
+        return { type: 'paragraph', children: [{ text: '' }] };
+      }
+      
+      // Ensure node has a children array
+      if (!Array.isArray(node.children)) {
+        return { ...node, children: [{ text: '' }] };
+      }
+      
+      // Validate children
+      const safeChildren = node.children.map((child: any) => {
+        if (typeof child !== 'object' || child === null) {
+          return { text: '' };
+        }
+        
+        // If it's a text node
+        if (typeof child.text === 'string') {
+          return child;
+        }
+        
+        // If it's a nested element
+        if (typeof child.type === 'string' && Array.isArray(child.children)) {
+          const grandchildren = child.children.map((gc: any) => {
+            return typeof gc === 'object' && gc !== null && typeof gc.text === 'string'
+              ? gc
+              : { text: '' };
+          });
+          return { ...child, children: grandchildren };
+        }
+        
+        return { text: '' };
+      });
+      
+      return { ...node, children: safeChildren };
+    });
+    
+    // One last check to ensure we have content
+    if (parsed.length === 0) {
+      return [{ type: 'paragraph', children: [{ text: '' }] }];
+    }
+    
+    return parsed;
+  } catch (error) {
+    console.error('Error sanitizing content:', error);
+    return [{ type: 'paragraph', children: [{ text: '' }] }];
+  }
+}
+
+export async function updateDocument(id: string, document: Partial<Document>) {
+  console.log('updateDocument called with:', { id, document });
+  
+  // Clone document to avoid mutating the original
+  const documentToUpdate = { ...document };
+  
+  // Validate content before saving
+  if (documentToUpdate.content !== undefined) {
     try {
-      const contentString = JSON.stringify(document.content);
-      document.content = JSON.parse(contentString);
-      console.log('Content properly serialized for storage:', document.content);
-    } catch (err) {
-      console.error('Error serializing document content:', err);
-      throw new Error('Failed to serialize document content');
+      // Sanitize the content to ensure it's valid
+      const sanitizedContent = sanitizeContent(documentToUpdate.content);
+      
+      if (sanitizedContent.length === 0) {
+        throw new Error('Invalid document content: Empty after sanitization');
+      }
+      
+      // Log sample of the content for debugging
+      console.log('Sanitized content sample:', 
+        sanitizedContent.slice(0, 2),
+        `(${sanitizedContent.length} nodes total)`
+      );
+      
+      documentToUpdate.content = sanitizedContent;
+    } catch (error) {
+      console.error('Content validation error:', error);
+      throw new Error('Failed to prepare document content for saving');
     }
   }
-  
-  console.log('Updating document with content:', document.content);
 
   // Get current user to ensure proper RLS policy compliance
   const { data: { session } } = await supabase.auth.getSession();
@@ -127,7 +207,7 @@ export async function updateDocument(id: string, document: Partial<Document>) {
     const currentDoc = await getDocument(id);
     
     // Create version with explicit user_id to satisfy RLS policies
-    await supabase
+    const { error: versionError } = await supabase
       .from('document_versions')
       .insert({
         document_id: id,
@@ -136,12 +216,17 @@ export async function updateDocument(id: string, document: Partial<Document>) {
         user_id: userId,
         change_summary: document.title ? `Updated title to ${document.title}` : 'Updated document content'
       });
+      
+    if (versionError) {
+      console.error('Error creating document version:', versionError);
+      // Continue with the update even if versioning fails
+    }
     
     // Now update the document
     const { data, error } = await supabase
       .from('documents')
       .update({
-        ...document,
+        ...documentToUpdate,
         version: currentDoc.version + 1,
         updated_at: new Date().toISOString()
       })
@@ -151,10 +236,20 @@ export async function updateDocument(id: string, document: Partial<Document>) {
 
     if (error) {
       console.error('Error updating document:', error);
-      throw new Error(error.message);
+      throw new Error(error.message || 'Failed to update document');
+    }
+
+    if (!data) {
+      throw new Error('No data returned from update operation');
     }
 
     console.log('Document updated successfully:', data);
+    
+    // Apply sanitization to returned data for consistency
+    if (data.content) {
+      data.content = sanitizeContent(data.content);
+    }
+    
     return data as Document;
   } catch (error: any) {
     console.error("Error updating document:", error);

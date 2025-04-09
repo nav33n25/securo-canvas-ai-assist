@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { createEditor, Descendant } from 'slate';
-import { Slate, Editable, withReact } from 'slate-react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { createEditor, Descendant, Editor, Transforms, Element as SlateElement, Node } from 'slate';
+import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { withHistory } from 'slate-history';
 import Toolbar from './Toolbar';
 import { renderElement, renderLeaf } from './RenderElements';
@@ -42,14 +42,18 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       const isValid = initialValue.every(node => 
         typeof (node as any).type === 'string' && Array.isArray((node as any).children)
       );
+      console.log('Initial content is valid:', isValid, initialValue);
       return isValid ? initialValue : emptyEditorContent;
     }
+    console.log('Using empty content because initialValue is invalid');
     return emptyEditorContent;
   }, [initialValue]);
   
   const [value, setValue] = useState<Descendant[]>(defaultValue);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [securityScore, setSecurityScore] = useState<number>(0);
+  const previousValueRef = useRef<string>(JSON.stringify(defaultValue));
+  const contentChangeTimeoutRef = useRef<number | null>(null);
   
   const editor = useMemo(() => {
     return withSecurityBlocks(withHistory(withReact(createEditor())));
@@ -60,7 +64,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
     if (Array.isArray(initialValue) && initialValue.length > 0) {
       // Additional validation to ensure content conforms to expected types
       try {
+        console.log('Updating editor content from new initialValue');
         setValue(initialValue);
+        previousValueRef.current = JSON.stringify(initialValue);
         calculateSecurityScore(initialValue);
       } catch (error) {
         console.error('Error setting editor value:', error);
@@ -158,73 +164,99 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
     return normalizedScore;
   }, []);
 
-  // Validate content structure to ensure security
-  const validateContent = useCallback((content: any): Descendant[] => {
-    if (!Array.isArray(content)) {
-      console.error('Invalid content format:', content);
+  // Normalize slate content to ensure it's valid
+  const normalizeSlateContent = useCallback((content: any[]): Descendant[] => {
+    if (!Array.isArray(content) || content.length === 0) {
       return emptyEditorContent;
+    }
+
+    // Ensure each node has a valid structure
+    return content.map(node => {
+      // Make sure node has a type
+      if (typeof node.type !== 'string') {
+        return { type: 'paragraph', children: [{ text: '' }] };
+      }
+
+      // Ensure children array exists and has at least one text node
+      if (!Array.isArray(node.children) || node.children.length === 0) {
+        return { ...node, children: [{ text: '' }] };
+      }
+
+      // Process each child to ensure it has text property
+      const children = node.children.map((child: any) => {
+        if (typeof child === 'object' && child !== null) {
+          // If it's a nested element, recursively normalize it
+          if (typeof child.type === 'string' && Array.isArray(child.children)) {
+            const normalizedChildren = child.children.map((grandchild: any) => {
+              return typeof grandchild.text === 'string' ? grandchild : { text: '' };
+            });
+            return { ...child, children: normalizedChildren };
+          }
+          // Otherwise it should be a text node with a text property
+          return { text: typeof child.text === 'string' ? child.text : '' };
+        }
+        return { text: '' };
+      });
+
+      return { ...node, children };
+    });
+  }, []);
+
+  // Handle content changes with debounce
+  const handleChange = useCallback((newValue: Descendant[]) => {
+    // Set the value immediately for the editor
+    setValue(newValue);
+    
+    // Clear any existing timeout
+    if (contentChangeTimeoutRef.current) {
+      window.clearTimeout(contentChangeTimeoutRef.current);
     }
     
-    try {
-      // Ensure each node has required properties
-      const sanitizedContent = content.map(node => {
-        // Ensure node has a valid type
-        if (typeof node.type !== 'string') {
-          return { type: 'paragraph', children: [{ text: '' }] };
-        }
-        
-        // Ensure node has children array
-        if (!Array.isArray(node.children)) {
-          return { ...node, children: [{ text: '' }] };
-        }
-        
-        // Sanitize children to ensure they have text property
-        const sanitizedChildren = node.children.map((child: any) => {
-          if (typeof child === 'object') {
-            return { text: typeof child.text === 'string' ? child.text : '', ...child };
-          }
-          return { text: '' };
-        });
-        
-        return { ...node, children: sanitizedChildren };
-      });
+    // Debounce the notification to parent to avoid too many updates
+    contentChangeTimeoutRef.current = window.setTimeout(() => {
+      // Deep normalize content to ensure it's valid
+      const normalizedContent = normalizeSlateContent(newValue);
       
-      return sanitizedContent;
-    } catch (error) {
-      console.error('Content validation error:', error);
-      return emptyEditorContent;
-    }
+      // Only update if content actually changed
+      const contentString = JSON.stringify(normalizedContent);
+      if (contentString !== previousValueRef.current) {
+        console.log('Content changed, notifying parent', normalizedContent);
+        previousValueRef.current = contentString;
+        onChange(normalizedContent);
+        calculateSecurityScore(normalizedContent);
+      }
+    }, 300);
+  }, [onChange, calculateSecurityScore, normalizeSlateContent]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (contentChangeTimeoutRef.current) {
+        window.clearTimeout(contentChangeTimeoutRef.current);
+      }
+    };
   }, []);
+
+  // Force content sync before save
+  const handleSave = useCallback(() => {
+    if (onSave) {
+      // Normalize current editor value
+      const normalizedContent = normalizeSlateContent(value);
+      
+      // Force update parent with latest content before saving
+      onChange(normalizedContent);
+      console.log('Saving normalized document content:', normalizedContent);
+      
+      // Small delay to ensure state updates propagate
+      setTimeout(() => {
+        onSave();
+      }, 50);
+    }
+  }, [onSave, value, onChange, normalizeSlateContent]);
 
   const toggleAIAssistant = useCallback(() => {
     setShowAIAssistant(prev => !prev);
   }, []);
-
-  const handleChange = useCallback((newValue: Descendant[]) => {
-    // Validate and sanitize the value to ensure it's properly structured
-    const validatedContent = validateContent(newValue);
-    
-    // First update local state for the editor
-    setValue(validatedContent);
-    
-    // Then notify parent component of the change
-    // Using a short timeout to ensure we're not calling the parent too frequently
-    // and to ensure that React has processed the state update
-    setTimeout(() => {
-      console.log('Sending content update to parent:', validatedContent);
-      onChange(validatedContent);
-    }, 0);
-    
-    calculateSecurityScore(validatedContent);
-  }, [onChange, calculateSecurityScore, validateContent]);
-
-  const handleSave = useCallback(() => {
-    if (onSave) {
-      // Use the latest value from state to ensure we have the most recent changes
-      console.log('Saving document with content from state:', value);
-      onSave();
-    }
-  }, [onSave, value]);
 
   return (
     <div className="flex flex-col h-full space-y-4">
