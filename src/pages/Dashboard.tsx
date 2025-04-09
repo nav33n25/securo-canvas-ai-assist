@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -247,12 +248,14 @@ const Dashboard: React.FC = () => {
         if (error) throw error;
         
         const transformedActivities: ActivityItem[] = (data || []).map(item => {
-          const profilesObj = item.profiles && typeof item.profiles === 'object' && !('error' in item.profiles) 
-            ? item.profiles 
-            : { first_name: null, last_name: null };
+          // Handle the case where item.profiles could be null
+          const profilesObj = item.profiles && typeof item.profiles === 'object' ? 
+            (item.profiles === null ? { first_name: null, last_name: null } : 
+            ('error' in item.profiles ? { first_name: null, last_name: null } : item.profiles)) : 
+            { first_name: null, last_name: null };
           
-          const firstName = profilesObj?.first_name || '';
-          const lastName = profilesObj?.last_name || '';
+          const firstName = profilesObj.first_name || '';
+          const lastName = profilesObj.last_name || '';
           
           return {
             id: item.id,
