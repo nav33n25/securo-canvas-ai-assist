@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navigate, useLocation, useRouter } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, UserRole, SubscriptionPlan, planRoles } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,6 @@ import { CheckIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
-// Define subscription plans and their allowed roles
 export interface PlanInfo {
   id: SubscriptionPlan;
   name: string;
@@ -93,7 +92,7 @@ const plans: PlanInfo[] = [
 
 const Auth = () => {
   const { signIn, signUp, isAuthenticated, redirectTo } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const defaultTab = searchParams.get('tab') || 'signin';
@@ -121,7 +120,6 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 3) {
-      // Just move to next step if we're not on the final step
       setStep(step + 1);
       return;
     }
@@ -154,7 +152,7 @@ const Auth = () => {
         role,
         plan,
       });
-      router.push("/dashboard");
+      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Error signing up",
@@ -172,12 +170,11 @@ const Auth = () => {
     setIsSignUp(tab === "signUp");
   };
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push(redirectTo || "/dashboard");
+      navigate(redirectTo || "/dashboard");
     }
-  }, [isAuthenticated, redirectTo, router]);
+  }, [isAuthenticated, redirectTo, navigate]);
 
   if (!loading && isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
