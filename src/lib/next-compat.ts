@@ -1,6 +1,6 @@
-
 // Compatibility layer for Next.js imports
-import React from 'react';
+// React is used in JSX below but we don't need to import it directly
+// as it will be handled by the framework
 
 // Next Router compatibility
 export const useRouter = () => {
@@ -35,10 +35,10 @@ export const useParams = <T extends Record<string, string>>() => {
   
   // Simple implementation that assumes /:param/ pattern
   if (segments.length >= 2) {
-    return { id: segments[segments.length - 1] } as T;
+    return { id: segments[segments.length - 1] } as unknown as T;
   }
   
-  return {} as T;
+  return {} as unknown as T;
 };
 
 export const useNavigate = () => {
