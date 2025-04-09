@@ -62,9 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Fetch profile information if user is logged in
         if (session?.user) {
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
+          fetchProfile(session.user.id);
         } else {
           setProfile(null);
           setRole(null);
@@ -94,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      setLoading(true);
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -107,35 +106,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           title: "Profile Error",
           description: "Failed to load your profile information. Please refresh and try again.",
         });
-      } else {
+        setLoading(false);
+        return;
+      }
+      
+      try {
         // Add email from the user object if available
-        const userEmail = supabase.auth.getUser().then(({ data }) => {
-          if (data?.user?.email) {
-            const profileWithEmail: UserProfile = {
-              ...(profileData as UserProfile),
-              email: data.user.email
-            };
-            setProfile(profileWithEmail);
-            
-            // Set user role from profile
-            if (profileWithEmail.role) {
-              setRole(profileWithEmail.role as UserRole);
-            } else {
-              // Default to individual if no role is set
-              setRole('individual');
-            }
+        const { data } = await supabase.auth.getUser();
+        if (data?.user?.email) {
+          const profileWithEmail: UserProfile = {
+            ...(profileData as UserProfile),
+            email: data.user.email
+          };
+          setProfile(profileWithEmail);
+          
+          // Set user role from profile
+          if (profileWithEmail.role) {
+            setRole(profileWithEmail.role as UserRole);
           } else {
-            setProfile(profileData as UserProfile);
-            
-            // Set user role from profile
-            if (profileData.role) {
-              setRole(profileData.role as UserRole);
-            } else {
-              // Default to individual if no role is set
-              setRole('individual');
-            }
+            // Default to individual if no role is set
+            setRole('individual');
+            // Update the profile with the default role
+            await supabase
+              .from('profiles')
+              .update({ role: 'individual' })
+              .eq('id', userId);
           }
-        });
+        } else {
+          setProfile(profileData as UserProfile);
+          
+          // Set user role from profile
+          if (profileData.role) {
+            setRole(profileData.role as UserRole);
+          } else {
+            // Default to individual if no role is set
+            setRole('individual');
+            // Update the profile with the default role
+            await supabase
+              .from('profiles')
+              .update({ role: 'individual' })
+              .eq('id', userId);
+          }
+        }
+      } catch (userError) {
+        console.error('Error getting user email:', userError);
+        setProfile(profileData as UserProfile);
+        
+        // Still set the role
+        if (profileData.role) {
+          setRole(profileData.role as UserRole);
+        } else {
+          setRole('individual');
+        }
+      } finally {
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -144,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Profile Error",
         description: "Unexpected error while loading profile data.",
       });
+      setLoading(false);
     }
   };
 

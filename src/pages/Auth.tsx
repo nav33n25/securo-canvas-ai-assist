@@ -85,36 +85,11 @@ const Auth = () => {
           <CardContent className="p-0">
             {showRoleSelection ? (
               <div className="px-6 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <RoleCard 
-                    title="Individual"
-                    description="Students, bug bounty hunters, consultants"
-                    role="individual"
-                    isSelected={selectedRole === 'individual'}
-                    onSelect={handleRoleSelected}
-                  />
-                  <RoleCard 
-                    title="Team Member"
-                    description="Security professionals in organizations"
-                    role="team_member"
-                    isSelected={selectedRole === 'team_member'}
-                    onSelect={handleRoleSelected}
-                  />
-                  <RoleCard 
-                    title="Team Manager"
-                    description="Security team leaders, CISOs"
-                    role="team_manager"
-                    isSelected={selectedRole === 'team_manager'}
-                    onSelect={handleRoleSelected}
-                  />
-                  <RoleCard 
-                    title="Administrator"
-                    description="Platform administrators"
-                    role="administrator"
-                    isSelected={selectedRole === 'administrator'}
-                    onSelect={handleRoleSelected}
-                  />
-                </div>
+                <RoleSelection 
+                  initialRole={selectedRole}
+                  onRoleSelect={handleRoleSelected}
+                  showContinueButton={false}
+                />
                 <div className="flex justify-between mt-6">
                   <Button
                     variant="outline"
@@ -241,26 +216,5 @@ const Auth = () => {
     </div>
   );
 };
-
-// Simple role card component for the auth page
-interface RoleCardProps {
-  title: string;
-  description: string;
-  role: UserRole;
-  isSelected: boolean;
-  onSelect: (role: UserRole) => void;
-}
-
-const RoleCard: React.FC<RoleCardProps> = ({ title, description, role, isSelected, onSelect }) => (
-  <div 
-    className={`border rounded-md p-3 cursor-pointer transition-all hover:bg-accent/50 ${
-      isSelected ? 'border-secure bg-secure/5' : 'border-border'
-    }`}
-    onClick={() => onSelect(role)}
-  >
-    <h3 className="font-medium">{title}</h3>
-    <p className="text-sm text-muted-foreground">{description}</p>
-  </div>
-);
 
 export default Auth;

@@ -40,9 +40,19 @@ const RoleCard: React.FC<RoleCardProps> = ({
   </Card>
 );
 
-const RoleSelection: React.FC = () => {
+interface RoleSelectionProps {
+  initialRole?: UserRole | null;
+  onRoleSelect?: (role: UserRole) => void;
+  showContinueButton?: boolean;
+}
+
+const RoleSelection: React.FC<RoleSelectionProps> = ({ 
+  initialRole, 
+  onRoleSelect, 
+  showContinueButton = true 
+}) => {
   const { setUserRole, role: currentRole } = useAuth();
-  const [selectedRole, setSelectedRole] = React.useState<UserRole | null>(currentRole);
+  const [selectedRole, setSelectedRole] = React.useState<UserRole | null>(initialRole || currentRole);
   const navigate = useNavigate();
 
   const roles: {
@@ -79,6 +89,10 @@ const RoleSelection: React.FC = () => {
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
+    
+    if (onRoleSelect) {
+      onRoleSelect(role);
+    }
   };
 
   const handleContinue = async () => {
@@ -111,15 +125,17 @@ const RoleSelection: React.FC = () => {
         ))}
       </div>
 
-      <div className="flex justify-end">
-        <Button 
-          onClick={handleContinue}
-          disabled={!selectedRole}
-          className="px-6"
-        >
-          Continue
-        </Button>
-      </div>
+      {showContinueButton && (
+        <div className="flex justify-end">
+          <Button 
+            onClick={handleContinue}
+            disabled={!selectedRole}
+            className="px-6"
+          >
+            Continue
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
