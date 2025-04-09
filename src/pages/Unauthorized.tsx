@@ -24,10 +24,13 @@ const Unauthorized: React.FC = () => {
   const getRoleName = (role: UserRole) => {
     switch(role) {
       case 'individual': return 'Individual';
+      case 'individual_basic': return 'Individual Basic';
+      case 'individual_professional': return 'Individual Professional';
       case 'team_member': return 'Team Member';
+      case 'team_analyst': return 'Team Analyst';
       case 'team_manager': return 'Team Manager';
       case 'administrator': return 'Administrator';
-      default: return role;
+      default: return role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
   };
   

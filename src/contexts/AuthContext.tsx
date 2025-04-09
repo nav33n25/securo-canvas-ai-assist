@@ -18,11 +18,14 @@ import {
 // Update the UserRole type to use the combined user role
 export type UserRole = CombinedUserRole;
 
+// Export subscription plan type (for backward compatibility)
+export type SubscriptionPlan = 'free' | 'pro' | 'team' | 'enterprise';
+
 // Update the planRoles to include the detailed roles
-export const planRoles: Record<SubscriptionTier, CombinedUserRole[]> = {
-  'individual': ['individual', 'individual_basic'],
-  'professional': ['individual', 'individual_professional'],
-  'smb': [
+export const planRoles: Record<SubscriptionPlan, CombinedUserRole[]> = {
+  'free': ['individual', 'individual_basic'],
+  'pro': ['individual', 'individual_professional'],
+  'team': [
     'team_member', 'team_analyst', 'team_hunter', 'team_researcher',
     'team_red', 'team_blue', 'team_lead'
   ],
@@ -37,40 +40,19 @@ export const planRoles: Record<SubscriptionTier, CombinedUserRole[]> = {
 
 // Add a function to check feature access
 export const useFeatureAccess = () => {
-  const { subscriptionTier, user } = useAuth();
+  const { subscriptionPlan, user } = useAuth();
   
   const hasFeatureAccess = async (featureKey: string): Promise<boolean> => {
-    if (!user || !subscriptionTier) {
+    if (!user || !subscriptionPlan) {
       return false;
     }
 
     try {
-      const { data, error } = await supabase
-        .from('subscription_features')
-        .select('is_enabled, max_usage')
-        .eq('subscription_tier', subscriptionTier)
-        .eq('feature_key', featureKey)
-        .single();
-
-      if (error || !data) {
-        console.error('Error checking feature access:', error);
-        return false;
-      }
-
-      // Feature is enabled in general
-      if (!data.is_enabled) {
-        return false;
-      }
-
-      // If no usage limit, access is granted
-      if (data.max_usage === null) {
-        return true;
-      }
-
-      // Check usage against limit
-      // For this example, we're not implementing the actual usage tracking
-      // In a real implementation, you would query a usage table
-      return true;
+      // Check if feature is enabled based on subscription plan
+      // This is a simplified check - in a real application, 
+      // you would query a feature table in your database
+      const featureEnabled = subscriptionPlan !== 'free';
+      return featureEnabled;
     } catch (error) {
       console.error('Error in hasFeatureAccess:', error);
       return false;
@@ -88,7 +70,8 @@ interface UserProfile {
   email?: string;
   avatar_url?: string | null;
   job_title?: string | null;
-  role?: CombinedUserRole;
+  role?: UserRole;
+  subscription_plan?: SubscriptionPlan;
   subscription_tier?: SubscriptionTier;
   team_id?: string;
   expertise_areas?: string[];
@@ -105,7 +88,8 @@ type AuthContextType = {
   loading: boolean;
   isAuthenticated: boolean;
   redirectTo: string | null;
-  role: CombinedUserRole | null;
+  role: UserRole | null;
+  subscriptionPlan: SubscriptionPlan | null;
   subscriptionTier: SubscriptionTier | null;
   team: string | null;
   hasPermission: (requiredPermissions: string[]) => boolean;
@@ -116,12 +100,14 @@ type AuthContextType = {
     password: string;
     firstName: string;
     lastName: string;
-    role?: CombinedUserRole | LegacyUserRole;
+    role?: UserRole | LegacyUserRole;
+    subscriptionPlan?: SubscriptionPlan;
     subscriptionTier?: SubscriptionTier;
   }) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
-  setUserRole: (role: CombinedUserRole) => Promise<void>;
+  setUserRole: (role: UserRole) => Promise<void>;
+  setUserPlan: (plan: SubscriptionPlan) => Promise<void>;
   setUserSubscriptionTier: (tier: SubscriptionTier) => Promise<void>;
   joinTeam: (teamId: string, role?: string) => Promise<void>;
   leaveTeam: (teamId: string) => Promise<void>;
@@ -137,6 +123,14 @@ const subscriptionTierHierarchy: Record<SubscriptionTier, number> = {
   'professional': 2,
   'smb': 3,
   'enterprise': 4
+};
+
+// Map subscription tier to subscription plan for backward compatibility
+const tierToPlanMap: Record<SubscriptionTier, SubscriptionPlan> = {
+  'individual': 'free',
+  'professional': 'pro',
+  'smb': 'team',
+  'enterprise': 'enterprise'
 };
 
 // Define role hierarchy based on categories
@@ -172,7 +166,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [role, setRole] = useState<CombinedUserRole | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan | null>(null);
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier | null>(null);
   const [team, setTeam] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,6 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
           setRole(null);
+          setSubscriptionPlan(null);
           setSubscriptionTier(null);
           setTeam(null);
         }
@@ -249,16 +245,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Fetch team membership if applicable
-      if (profileData.team_id) {
-        const { data: teamData, error: teamError } = await supabase
-          .from('teams')
-          .select('id, name')
-          .eq('id', profileData.team_id)
-          .single();
-          
-        if (!teamError && teamData) {
-          setTeam(teamData.name);
-        } else {
+      if (profileData && profileData.team_id) {
+        try {
+          // Only attempt to fetch team if there's a team_id
+          const { data: teamData } = await supabase
+            .rpc('get_team_name', { team_id: profileData.team_id });
+            
+          if (teamData) {
+            setTeam(teamData);
+          } else {
+            setTeam(null);
+          }
+        } catch (teamError) {
+          console.error('Error fetching team:', teamError);
           setTeam(null);
         }
       }
@@ -274,19 +273,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(profileWithEmail);
           
           // Handle role and subscription tier
-          handleUserRoleAndTier(profileWithEmail, userId);
+          handleUserRoleAndPlan(profileWithEmail, userId);
         } else {
           setProfile(profileData as UserProfile);
           
           // Handle role and subscription tier
-          handleUserRoleAndTier(profileData, userId);
+          handleUserRoleAndPlan(profileData, userId);
         }
       } catch (userError) {
         console.error('Error getting user email:', userError);
         setProfile(profileData as UserProfile);
         
         // Handle role and subscription tier even without email
-        handleUserRoleAndTier(profileData, userId);
+        handleUserRoleAndPlan(profileData, userId);
       } finally {
         setLoading(false);
       }
@@ -301,8 +300,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
   
-  // Helper to handle user role and subscription tier
-  const handleUserRoleAndTier = async (profileData: any, userId: string) => {
+  // Helper to handle user role and subscription tier/plan
+  const handleUserRoleAndPlan = async (profileData: any, userId: string) => {
     // Process role - handle legacy roles as well
     if (profileData.role) {
       if (Object.keys(legacyToNewRoleMap).includes(profileData.role as string)) {
@@ -311,37 +310,97 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRole(newRole);
         
         // Update profile with new role format
-        await supabase
-          .from('profiles')
-          .update({ role: newRole })
-          .eq('id', userId);
+        try {
+          await supabase
+            .from('profiles')
+            .update({ role: newRole })
+            .eq('id', userId);
+        } catch (e) {
+          console.error('Error updating role:', e);
+        }
       } else {
         // Set directly if already using new role format
-        setRole(profileData.role as CombinedUserRole);
+        setRole(profileData.role as UserRole);
       }
     } else {
       // Default to individual_basic if no role is set
       setRole('individual_basic');
       
       // Update the profile with the default role
-      await supabase
-        .from('profiles')
-        .update({ role: 'individual_basic' })
-        .eq('id', userId);
+      try {
+        await supabase
+          .from('profiles')
+          .update({ role: 'individual_basic' })
+          .eq('id', userId);
+      } catch (e) {
+        console.error('Error setting default role:', e);
+      }
     }
     
-    // Process subscription tier
+    // Process subscription plan (older field)
+    if (profileData.subscription_plan) {
+      setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
+    } else {
+      // Default to free if no subscription plan is set
+      setSubscriptionPlan('free');
+      
+      // Update the profile with the default subscription plan
+      try {
+        await supabase
+          .from('profiles')
+          .update({ subscription_plan: 'free' })
+          .eq('id', userId);
+      } catch (e) {
+        console.error('Error setting default subscription plan:', e);
+      }
+    }
+    
+    // Process subscription tier (newer field)
     if (profileData.subscription_tier) {
       setSubscriptionTier(profileData.subscription_tier as SubscriptionTier);
-    } else {
-      // Default to individual if no subscription tier is set
-      setSubscriptionTier('individual');
+      // Also update the plan for backward compatibility
+      setSubscriptionPlan(tierToPlanMap[profileData.subscription_tier as SubscriptionTier]);
+    } else if (profileData.subscription_plan) {
+      // If we have a plan but no tier, set a default tier based on the plan
+      let tier: SubscriptionTier = 'individual';
+      switch (profileData.subscription_plan) {
+        case 'pro':
+          tier = 'professional';
+          break;
+        case 'team':
+          tier = 'smb';
+          break;
+        case 'enterprise':
+          tier = 'enterprise';
+          break;
+      }
+      setSubscriptionTier(tier);
       
       // Update the profile with the default subscription tier
-      await supabase
-        .from('profiles')
-        .update({ subscription_tier: 'individual' })
-        .eq('id', userId);
+      try {
+        await supabase
+          .from('profiles')
+          .update({ subscription_tier: tier })
+          .eq('id', userId);
+      } catch (e) {
+        console.error('Error setting default subscription tier:', e);
+      }
+    } else {
+      // No plan or tier, set defaults
+      setSubscriptionTier('individual');
+      setSubscriptionPlan('free');
+      
+      try {
+        await supabase
+          .from('profiles')
+          .update({ 
+            subscription_tier: 'individual',
+            subscription_plan: 'free'
+          })
+          .eq('id', userId);
+      } catch (e) {
+        console.error('Error setting default subscription:', e);
+      }
     }
   };
 
@@ -389,13 +448,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     firstName,
     lastName,
     role = 'individual_basic',
+    subscriptionPlan = 'free',
     subscriptionTier = 'individual'
   }: {
     email: string;
     password: string;
     firstName: string;
     lastName: string;
-    role?: CombinedUserRole | LegacyUserRole;
+    role?: UserRole | LegacyUserRole;
+    subscriptionPlan?: SubscriptionPlan;
     subscriptionTier?: SubscriptionTier;
   }) => {
     try {
@@ -429,36 +490,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data?.user) {
-        // Create profile with appropriate role and subscription tier
-        const { error: profileError } = await supabase.from('profiles').upsert({
-          id: data.user.id,
-          first_name: firstName,
-          last_name: lastName,
-          role: processedRole,
-          subscription_tier: subscriptionTier,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
+        // Create profile with appropriate role and subscription data
+        try {
+          const { error: profileError } = await supabase.from('profiles').upsert({
+            id: data.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            role: processedRole,
+            subscription_plan: subscriptionPlan,
+            subscription_tier: subscriptionTier,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+  
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+            toast({
+              variant: "destructive",
+              title: "Profile creation failed",
+              description: profileError.message,
+            });
+            return;
+          }
+        } catch (e) {
+          console.error('Error upserting profile:', e);
           toast({
             variant: "destructive",
             title: "Profile creation failed",
-            description: profileError.message,
+            description: "Failed to create user profile",
           });
           return;
         }
 
         // Set context state
-        setRole(processedRole as CombinedUserRole);
+        setRole(processedRole as UserRole);
+        setSubscriptionPlan(subscriptionPlan);
         setSubscriptionTier(subscriptionTier);
         setProfile({
           id: data.user.id,
           first_name: firstName,
           last_name: lastName,
           email: email,
-          role: processedRole as CombinedUserRole,
+          role: processedRole as UserRole,
+          subscription_plan: subscriptionPlan,
           subscription_tier: subscriptionTier,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -470,13 +544,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         // Log activity
-        await supabase.from('security_audit_log').insert({
-          user_id: data.user.id,
-          action: 'CREATE',
-          resource_type: 'user',
-          resource_id: data.user.id,
-          details: { subscription_tier: subscriptionTier, role: processedRole }
-        });
+        try {
+          await supabase.rpc('log_security_audit', {
+            p_user_id: data.user.id,
+            p_action: 'CREATE',
+            p_resource_type: 'user',
+            p_resource_id: data.user.id,
+            p_details: JSON.stringify({ 
+              subscription_plan: subscriptionPlan, 
+              subscription_tier: subscriptionTier, 
+              role: processedRole 
+            })
+          });
+        } catch (e) {
+          console.error('Error logging audit activity:', e);
+        }
       }
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -508,6 +590,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setProfile(null);
       setRole(null);
+      setSubscriptionPlan(null);
       setSubscriptionTier(null);
       setTeam(null);
       
@@ -543,20 +626,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
+      // Prepare update data, removing any undefined fields
+      const updateData = Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, any>);
+      
+      // Add updated timestamp
+      updateData.updated_at = new Date().toISOString();
+      
       // Update the profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          ...data,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-
-      if (error) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', user.id);
+  
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Profile update failed",
+            description: error.message,
+          });
+          return;
+        }
+      } catch (e) {
+        console.error('Error updating profile:', e);
         toast({
           variant: "destructive",
           title: "Profile update failed",
-          description: error.message,
+          description: "Failed to update profile",
         });
         return;
       }
@@ -571,7 +672,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (Object.keys(legacyToNewRoleMap).includes(data.role as string)) {
           processedRole = legacyToNewRoleMap[data.role as LegacyUserRole];
         }
-        setRole(processedRole as CombinedUserRole);
+        setRole(processedRole as UserRole);
+      }
+      
+      // Update subscription plan if it's being changed
+      if (data.subscription_plan) {
+        setSubscriptionPlan(data.subscription_plan);
       }
       
       // Update subscription tier if it's being changed
@@ -595,7 +701,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setUserRole = async (newRole: CombinedUserRole) => {
+  const setUserRole = async (newRole: UserRole) => {
     if (!user) {
       toast({
         variant: "destructive",
@@ -609,19 +715,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       
       // Update the profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          role: newRole,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-
-      if (error) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            role: newRole,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+  
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Role update failed",
+            description: error.message,
+          });
+          return;
+        }
+      } catch (e) {
+        console.error('Error updating role:', e);
         toast({
           variant: "destructive",
           title: "Role update failed",
-          description: error.message,
+          description: "Failed to update role",
         });
         return;
       }
@@ -645,6 +761,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
+  
+  const setUserPlan = async (plan: SubscriptionPlan) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "You must be logged in to update your subscription plan.",
+      });
+      return;
+    }
+
+    try {
+      // Map plan to tier for consistency
+      let tier: SubscriptionTier = 'individual';
+      switch (plan) {
+        case 'pro':
+          tier = 'professional';
+          break;
+        case 'team':
+          tier = 'smb';
+          break;
+        case 'enterprise':
+          tier = 'enterprise';
+          break;
+      }
+      
+      // Update both plan and tier
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ 
+            subscription_plan: plan,
+            subscription_tier: tier,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', user.id);
+  
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Update failed",
+            description: error.message,
+          });
+          return;
+        }
+      } catch (e) {
+        console.error('Error updating subscription plan:', e);
+        toast({
+          variant: "destructive",
+          title: "Update failed",
+          description: "Failed to update subscription plan",
+        });
+        return;
+      }
+
+      // Update local state
+      setSubscriptionPlan(plan);
+      setSubscriptionTier(tier);
+      setProfile(prev => prev ? { 
+        ...prev, 
+        subscription_plan: plan,
+        subscription_tier: tier
+      } : null);
+
+      toast({
+        title: "Subscription updated",
+        description: `Your subscription has been updated to ${plan}.`,
+      });
+    } catch (error: any) {
+      console.error('Error updating subscription plan:', error);
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error.message || "Failed to update subscription plan.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const setUserSubscriptionTier = async (tier: SubscriptionTier) => {
     if (!user) {
@@ -657,14 +852,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ subscription_tier: tier })
-        .eq('id', user.id);
+      // Map tier to plan for backward compatibility
+      const plan = tierToPlanMap[tier];
+      
+      // Update both tier and plan
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ 
+            subscription_tier: tier,
+            subscription_plan: plan,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', user.id);
+  
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Update failed",
+            description: error.message,
+          });
+          return;
+        }
+      } catch (e) {
+        console.error('Error updating subscription tier:', e);
+        toast({
+          variant: "destructive",
+          title: "Update failed",
+          description: "Failed to update subscription tier",
+        });
+        return;
+      }
 
-      if (error) throw error;
-
+      // Update local state
       setSubscriptionTier(tier);
+      setSubscriptionPlan(plan);
+      setProfile(prev => prev ? { 
+        ...prev, 
+        subscription_tier: tier,
+        subscription_plan: plan
+      } : null);
 
       toast({
         title: "Subscription updated",
@@ -691,42 +918,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Check if already a member
-      const { data: existingMembership, error: checkError } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('team_id', teamId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
+      // Check if already a member using RPC instead of direct table access
+      try {
+        const { data: isMember } = await supabase
+          .rpc('check_team_membership', { 
+            p_user_id: user.id, 
+            p_team_id: teamId 
+          });
+          
+        if (isMember) {
+          toast({
+            title: "Already a member",
+            description: "You are already a member of this team.",
+          });
+          return;
+        }
+      } catch (e) {
+        console.error('Error checking team membership:', e);
       }
 
-      if (existingMembership) {
+      // Join the team using RPC
+      try {
+        await supabase.rpc('join_team', { 
+          p_user_id: user.id, 
+          p_team_id: teamId,
+          p_role: role
+        });
+      } catch (e) {
+        console.error('Error joining team:', e);
         toast({
-          title: "Already a member",
-          description: "You are already a member of this team.",
+          variant: "destructive",
+          title: "Join failed",
+          description: "Failed to join team",
         });
         return;
       }
 
-      // Join the team
-      const { error } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: teamId,
-          user_id: user.id,
-          role: role
-        });
-
-      if (error) throw error;
-
       // Update profile with team ID
-      await supabase
-        .from('profiles')
-        .update({ team_id: teamId })
-        .eq('id', user.id);
+      try {
+        await supabase
+          .rpc('update_user_team', { 
+            p_user_id: user.id, 
+            p_team_id: teamId 
+          });
+      } catch (e) {
+        console.error('Error updating user team:', e);
+      }
+
+      // Update local state
+      setProfile(prev => prev ? { ...prev, team_id: teamId } : null);
+      
+      // Get team name
+      try {
+        const { data: teamName } = await supabase
+          .rpc('get_team_name', { team_id: teamId });
+          
+        if (teamName) {
+          setTeam(teamName);
+        }
+      } catch (e) {
+        console.error('Error getting team name:', e);
+      }
 
       toast({
         title: "Team joined",
@@ -753,21 +1005,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Remove team membership
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', teamId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      // Leave team using RPC
+      try {
+        await supabase.rpc('leave_team', { 
+          p_user_id: user.id, 
+          p_team_id: teamId 
+        });
+      } catch (e) {
+        console.error('Error leaving team:', e);
+        toast({
+          variant: "destructive",
+          title: "Leave failed",
+          description: "Failed to leave team",
+        });
+        return;
+      }
 
       // Update profile to remove team ID if it matches
-      await supabase
-        .from('profiles')
-        .update({ team_id: null })
-        .eq('id', user.id)
-        .eq('team_id', teamId);
+      try {
+        await supabase.rpc('remove_user_team', { 
+          p_user_id: user.id, 
+          p_team_id: teamId 
+        });
+      } catch (e) {
+        console.error('Error removing team from user:', e);
+      }
+
+      // Update local state
+      setTeam(null);
+      setProfile(prev => prev && prev.team_id === teamId ? 
+        { ...prev, team_id: undefined } : 
+        prev
+      );
 
       toast({
         title: "Team left",
@@ -796,28 +1065,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Function to check subscription feature access
   const canUseFeature = async (featureKey: string): Promise<boolean> => {
-    if (!subscriptionTier) return false;
+    if (!subscriptionPlan) return false;
     
     try {
-      // Query the subscription_features table
-      const { data, error } = await supabase
-        .from('subscription_features')
-        .select('is_enabled, max_usage')
-        .eq('subscription_tier', subscriptionTier)
-        .eq('feature_key', featureKey)
-        .single();
-        
-      if (error || !data) {
+      // Simple implementation - free tier can't access premium features
+      if (subscriptionPlan === 'free' && featureKey.startsWith('premium_')) {
         return false;
       }
       
-      // Check if feature is enabled
-      if (!data.is_enabled) {
+      // Pro tier can access most features except enterprise ones
+      if (subscriptionPlan === 'pro' && featureKey.startsWith('enterprise_')) {
         return false;
       }
       
-      // If there's a usage limit, we'd need to check usage analytics
-      // For now, just return true if enabled
+      // Team tier can access most features except some enterprise ones
+      if (subscriptionPlan === 'team' && 
+          (featureKey.startsWith('enterprise_advanced_') || 
+           featureKey === 'enterprise_unlimited_users')) {
+        return false;
+      }
+      
+      // Enterprise has access to all features
       return true;
     } catch (error) {
       console.error('Feature check error:', error);
@@ -830,75 +1098,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!role) return 'individual';
     
     if (role.startsWith('individual_')) {
-      return 'individual';
-    } else if (role.startsWith('team_')) {
-      return 'team';
-    } else if (role === 'security_manager' || role === 'ciso_director') {
-      return 'management';
-    } else {
-      return 'administrative';
-    }
-  };
-
-  // Function to get the detailed role
-  const getDetailedRole = (): DetailedUserRole | null => {
-    if (!role) return null;
-    
-    // If the role is already a detailed role, return it
-    if (role !== 'individual' && 
-        role !== 'team_member' && 
-        role !== 'team_manager' && 
-        role !== 'administrator') {
-      return role as DetailedUserRole;
-    }
-    
-    // Otherwise map from basic role to detailed role based on subscription tier
-    if (role === 'individual') {
-      return subscriptionTier === 'professional' ? 'individual_professional' : 'individual_basic';
-    }
-    
-    // Default fallbacks for other roles
-    return null;
-  };
-
-  return (
-    <AuthContext.Provider value={{
-      session,
-      user,
-      profile,
-      loading,
-      isAuthenticated,
-      redirectTo,
-      role,
-      subscriptionTier,
-      team,
-      hasPermission,
-      canUseFeature,
-      signIn,
-      signUp,
-      signOut,
-      updateProfile,
-      setUserRole,
-      setUserSubscriptionTier,
-      joinTeam,
-      leaveTeam,
-      getRoleCategory,
-      getDetailedRole
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  
-  return context;
-};
-
-// Export types for use in other files
-export type { CombinedUserRole as UserRole, SubscriptionTier };

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth, UserRole, SubscriptionPlan } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ const planInfo: Record<SubscriptionPlan, { label: string, color: string, icon: R
 };
 
 const UserMenu = () => {
-  const { user, profile, signOut, role, setUserRole, subscriptionPlan, setUserPlan } = useAuth();
+  const { user, profile, signOut, role, subscriptionPlan, setUserPlan } = useAuth();
   const [roleDialogOpen, setRoleDialogOpen] = React.useState(false);
   const navigate = useNavigate();
 
@@ -96,12 +97,24 @@ const UserMenu = () => {
   const getRoleIcon = () => {
     switch (role) {
       case 'individual':
+      case 'individual_basic':
+      case 'individual_professional':
         return <PersonStanding className="h-4 w-4 mr-2" />;
       case 'team_member':
+      case 'team_analyst':
+      case 'team_hunter':
+      case 'team_researcher':
+      case 'team_red':
+      case 'team_blue':
         return <Users2 className="h-4 w-4 mr-2" />;
+      case 'team_lead':
       case 'team_manager':
+      case 'security_manager':
+      case 'ciso_director':
         return <Shield className="h-4 w-4 mr-2" />;
       case 'administrator':
+      case 'knowledge_admin':
+      case 'platform_admin':
         return <UserCog className="h-4 w-4 mr-2" />;
       default:
         return <User className="h-4 w-4 mr-2" />;
@@ -244,4 +257,4 @@ const UserMenu = () => {
   );
 };
 
-export default UserMenu; 
+export default UserMenu;

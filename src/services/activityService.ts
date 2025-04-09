@@ -1,73 +1,79 @@
-
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
-export interface ActivityItem {
+interface ActivityData {
   id: string;
-  type: 'document_updated' | 'document_created' | 'comment_added' | 'role_changed' | 'joined';
-  document_id?: string;
-  document_title?: string;
-  user_id: string;
-  user_name?: string;
-  created_at: string;
-  content?: string;
+  userId: string;
+  userName: string;
+  avatarUrl: string;
+  activityType: string;
+  details: any;
+  date: string;
+  time: string;
+  fullDate: Date;
 }
 
-export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]> => {
+// Make sure to add null check for item.profiles
+export const formatActivityData = (data: any[]): ActivityData[] => {
+  return data.map(item => {
+    // Extract user information with null checks
+    const firstName = item.profiles?.first_name || 'Unknown';
+    const lastName = item.profiles?.last_name || 'User';
+    const avatarUrl = item.profiles?.avatar_url || '';
+    
+    // Format date and time
+    const date = new Date(item.created_at);
+    const formattedDate = format(date, 'MMM d, yyyy');
+    const formattedTime = format(date, 'h:mm a');
+    
+    // Return formatted activity data
+    return {
+      id: item.id,
+      userId: item.user_id,
+      userName: `${firstName} ${lastName}`,
+      avatarUrl,
+      activityType: item.activity_type,
+      details: item.details,
+      date: formattedDate,
+      time: formattedTime,
+      fullDate: date,
+    };
+  });
+};
+
+export const getActivityData = async (): Promise<ActivityData[]> => {
   try {
-    // Add error handling if userId is not provided
-    if (!userId) {
-      console.warn('fetchActivityFeed called without userId');
+    // Fetch activity data from Supabase
+    const { data, error } = await supabase
+      .from('security_audit_log')
+      .select(`
+        id,
+        user_id,
+        action,
+        resource_type,
+        resource_id,
+        details,
+        created_at,
+        profiles (
+          first_name,
+          last_name,
+          avatar_url
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (error) {
+      console.error('Error fetching activity data:', error);
       return [];
     }
-
-    const { data, error } = await supabase
-      .from('document_versions')
-      .select(`
-        id, 
-        created_at, 
-        change_summary,
-        document_id,
-        documents(title),
-        profiles(first_name, last_name)
-      `)
-      .limit(10)
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      console.error('Error fetching activity feed:', error);
-      throw error;
-    }
     
-    // Safely transform the data with proper null checks
-    const transformedActivities: ActivityItem[] = (data || []).map(item => {
-      let firstName = '';
-      let lastName = '';
-      
-      // Fix the TypeScript errors by adding proper null checks
-      if (item.profiles && typeof item.profiles === 'object') {
-        // Access properties safely using optional chaining and nullish coalescing
-        firstName = item.profiles?.first_name ?? '';
-        lastName = item.profiles?.last_name ?? '';
-      }
-      
-      // Safely extract document title
-      const documentTitle = item.documents?.title || 'Untitled Document';
-      
-      return {
-        id: item.id || `temp-${Date.now()}-${Math.random()}`,
-        type: 'document_updated',
-        document_id: item.document_id || undefined,
-        document_title: documentTitle,
-        user_id: userId,
-        user_name: `${firstName} ${lastName}`.trim() || 'Unknown User',
-        created_at: item.created_at || new Date().toISOString(),
-        content: item.change_summary || 'Updated document'
-      };
-    });
+    // Format the activity data
+    const formattedData = formatActivityData(data);
     
-    return transformedActivities;
+    return formattedData;
   } catch (error) {
-    console.error('Error fetching activity feed:', error);
+    console.error('Error fetching activity data:', error);
     return [];
   }
 };
