@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Descendant } from 'slate';
+import { Json } from '@/integrations/supabase/types';
 
 export interface RecentDocument {
   id: string;
@@ -71,7 +72,11 @@ export const getDocuments = async (): Promise<Document[]> => {
       
     if (error) throw error;
     
-    return data || [];
+    // Type cast content from Json to Descendant[]
+    return (data || []).map(doc => ({
+      ...doc,
+      content: doc.content as unknown as Descendant[]
+    }));
   } catch (error) {
     console.error('Error fetching documents:', error);
     return [];
@@ -88,7 +93,13 @@ export const getDocument = async (id: string): Promise<Document | null> => {
       
     if (error) throw error;
     
-    return data;
+    if (!data) return null;
+    
+    // Type cast content from Json to Descendant[]
+    return {
+      ...data,
+      content: data.content as unknown as Descendant[]
+    };
   } catch (error) {
     console.error('Error fetching document:', error);
     throw new Error('Failed to load document');
@@ -114,7 +125,11 @@ export const createDocument = async (input: CreateDocumentInput): Promise<Docume
       throw new Error('No data returned from document creation');
     }
     
-    return data;
+    // Type cast content from Json to Descendant[]
+    return {
+      ...data,
+      content: data.content as unknown as Descendant[]
+    };
   } catch (error) {
     console.error('Error creating document:', error);
     throw new Error('Failed to create document');
@@ -141,7 +156,11 @@ export const updateDocument = async (id: string, input: UpdateDocumentInput): Pr
       throw new Error('No data returned from document update');
     }
     
-    return data;
+    // Type cast content from Json to Descendant[]
+    return {
+      ...data,
+      content: data.content as unknown as Descendant[]
+    };
   } catch (error) {
     console.error('Error updating document:', error);
     throw new Error('Failed to update document');
@@ -156,7 +175,11 @@ export const getTemplates = async (): Promise<DocumentTemplate[]> => {
       
     if (error) throw error;
     
-    return data || [];
+    // Type cast content from Json to Descendant[]
+    return (data || []).map(template => ({
+      ...template,
+      content: template.content as unknown as Descendant[]
+    }));
   } catch (error) {
     console.error('Error fetching templates:', error);
     return [];
@@ -200,7 +223,11 @@ export const createDocumentFromTemplate = async (
       throw new Error('No data returned from document creation');
     }
     
-    return data;
+    // Type cast content from Json to Descendant[]
+    return {
+      ...data,
+      content: data.content as unknown as Descendant[]
+    };
   } catch (error) {
     console.error('Error creating document from template:', error);
     throw new Error('Failed to create document from template');
