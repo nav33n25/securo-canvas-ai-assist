@@ -70,6 +70,11 @@ export type WarningElement = {
   children: CustomText[];
 };
 
+export type ControlElement = {
+  type: 'control';
+  children: CustomText[];
+};
+
 export type CustomElement =
   | ParagraphElement
   | HeadingOneElement
@@ -83,7 +88,8 @@ export type CustomElement =
   | SecurityNoteElement
   | VulnerabilityElement
   | ComplianceElement
-  | WarningElement;
+  | WarningElement
+  | ControlElement;
 
 export type FormattedText = {
   text: string;

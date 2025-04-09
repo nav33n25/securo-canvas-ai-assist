@@ -19,10 +19,10 @@ import {
 } from '@/components/ui/form';
 
 type ProfileFormValues = {
-  first_name: string;
-  last_name: string;
-  job_title: string;
-  avatar_url: string;
+  first_name: string | null;
+  last_name: string | null;
+  job_title: string | null;
+  avatar_url: string | null;
 };
 
 const ProfilePage = () => {
@@ -70,7 +70,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>First Name</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} value={field.value || ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -83,7 +83,7 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Last Name</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} value={field.value || ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -98,7 +98,7 @@ const ProfilePage = () => {
                       <FormItem>
                         <FormLabel>Job Title</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -112,7 +112,7 @@ const ProfilePage = () => {
                       <FormItem>
                         <FormLabel>Avatar URL</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} value={field.value || ''} />
                         </FormControl>
                         <FormDescription>
                           Enter a URL for your profile picture
@@ -143,7 +143,7 @@ const ProfilePage = () => {
             </CardHeader>
             <CardContent className="flex flex-col items-center space-y-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={profile?.avatar_url} alt={profile?.first_name || user?.email || ''} />
+                <AvatarImage src={profile?.avatar_url || ''} alt={profile?.first_name || user?.email || ''} />
                 <AvatarFallback className="text-2xl">{userInitials}</AvatarFallback>
               </Avatar>
               

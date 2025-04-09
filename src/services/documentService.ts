@@ -61,14 +61,16 @@ export async function getDocument(id: string) {
   console.log('Raw document content from database:', data.content);
   
   // Ensure we have valid content structure using our sanitize function
-  data.content = sanitizeContent(data.content);
+  const content = data.content as any;
+  data.content = sanitizeContent(content);
   
   console.log('Document after sanitization:', {
     id: data.id,
     title: data.title,
-    contentLength: data.content?.length || 0,
+    contentLength: Array.isArray(data.content) ? data.content.length : 0,
     version: data.version,
-    firstNodeType: data.content && data.content.length > 0 ? data.content[0].type : 'none'
+    firstNodeType: Array.isArray(data.content) && data.content.length > 0 ? 
+      (data.content[0] as any).type : 'none'
   });
   
   return data as Document;
@@ -117,7 +119,7 @@ function sanitizeContent(content: any): any[] {
     }
     
     // Validate and fix each node in the content
-    parsed = parsed.map(node => {
+    parsed = parsed.map((node: any) => {
       // Ensure node is an object
       if (typeof node !== 'object' || node === null) {
         return { type: 'paragraph', children: [{ text: '' }] };
@@ -177,8 +179,9 @@ export async function updateDocument(id: string, document: Partial<Document>) {
   console.log('updateDocument called with:', { id, documentTitle: document.title });
   
   if (document.content) {
-    console.log('Content length to save:', document.content.length);
-    console.log('First node type:', document.content[0]?.type || 'unknown');
+    const content = document.content as any[];
+    console.log('Content length to save:', content.length);
+    console.log('First node type:', content[0]?.type || 'unknown');
   }
   
   // Clone document to avoid mutating the original
@@ -262,7 +265,7 @@ export async function updateDocument(id: string, document: Partial<Document>) {
     console.log('Document updated successfully:', {
       id: data.id,
       title: data.title,
-      contentLength: data.content?.length || 0,
+      contentLength: Array.isArray(data.content) ? (data.content as any[]).length : 0,
       version: data.version
     });
     

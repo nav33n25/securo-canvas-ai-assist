@@ -66,6 +66,16 @@ export const renderElement = (props: RenderElementProps) => {
           <div>{children}</div>
         </div>
       );
+    case 'control':
+      return (
+        <div 
+          {...attributes} 
+          className="border-2 border-blue-500 rounded-md p-3 my-3 bg-blue-500/10"
+        >
+          <div className="text-blue-500 font-semibold">Control</div>
+          <div>{children}</div>
+        </div>
+      );
     default:
       return <p {...attributes} className="my-2">{children}</p>;
   }

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
@@ -7,10 +8,11 @@ import { toast } from '@/components/ui/use-toast';
 // Define a proper interface for the user profile
 interface UserProfile {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  avatar_url?: string;
+  first_name: string | null;
+  last_name: string | null;
+  email?: string; // Making email optional since it might come from user object
+  avatar_url?: string | null;
+  job_title?: string | null;
   role?: string;
   organization_id?: string;
   created_at?: string;
@@ -91,7 +93,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           description: "Failed to load your profile information. Please refresh and try again.",
         });
       } else {
-        setProfile(profileData as UserProfile);
+        // Add email from the user object if available
+        const userEmail = supabase.auth.getUser().then(({ data }) => {
+          if (data?.user?.email) {
+            const profileWithEmail: UserProfile = {
+              ...(profileData as UserProfile),
+              email: data.user.email
+            };
+            setProfile(profileWithEmail);
+          } else {
+            setProfile(profileData as UserProfile);
+          }
+        });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
