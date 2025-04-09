@@ -15,6 +15,9 @@ import {
   CombinedUserRole
 } from '@/types/usoh';
 
+// Update the UserRole type to use the combined user role
+export type UserRole = CombinedUserRole;
+
 // Update the planRoles to include the detailed roles
 export const planRoles: Record<SubscriptionTier, CombinedUserRole[]> = {
   'individual': ['individual', 'individual_basic'],
@@ -896,3 +899,6 @@ export const useAuth = () => {
   
   return context;
 };
+
+// Export types for use in other files
+export type { CombinedUserRole as UserRole, SubscriptionTier };
