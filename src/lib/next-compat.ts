@@ -1,3 +1,4 @@
+
 // Compatibility layer for Next.js imports
 // React is used in JSX below but we don't need to import it directly
 // as it will be handled by the framework
