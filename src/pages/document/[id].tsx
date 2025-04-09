@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -25,7 +24,6 @@ const DocumentPage = () => {
   const autoSaveTimerRef = useRef<number | null>(null);
   const initialLoadCompleted = useRef(false);
   
-  // Get document query
   const { data: document, isLoading, error, refetch } = useQuery({
     queryKey: ['document', id],
     queryFn: () => getDocument(id!),
@@ -34,10 +32,8 @@ const DocumentPage = () => {
     staleTime: 1000 * 60, // 1 minute
   });
 
-  // Update document mutation
   const { mutate: saveDocument, isPending: isSaving } = useMutation({
     mutationFn: () => {
-      // Create a deep copy of the content to ensure we're not affected by references
       try {
         console.log('Preparing to save document', {
           id,
@@ -50,7 +46,6 @@ const DocumentPage = () => {
           throw new Error('Cannot save empty content');
         }
         
-        // Create a deep copy to ensure we're not affected by references
         const contentCopy = JSON.parse(JSON.stringify(editorContent)) as CustomElement[];
         
         return updateDocument(id!, {
@@ -83,7 +78,6 @@ const DocumentPage = () => {
     }
   });
 
-  // Set initial document data
   useEffect(() => {
     if (document && !initialLoadCompleted.current) {
       console.log('Document loaded, setting initial data:', {
@@ -97,23 +91,19 @@ const DocumentPage = () => {
       
       setDocumentTitle(document.title || "Untitled Document");
       
-      // Ensure document content is valid
       if (Array.isArray(document.content) && document.content.length > 0) {
         console.log('Setting editor content from document:', 
           document.content.slice(0, 2), 
           `(${document.content.length} nodes total)`
         );
         
-        // Make a deep copy to avoid reference issues
         const contentCopy = JSON.parse(JSON.stringify(document.content));
         setEditorContent(contentCopy);
       } else {
-        // Set default content if the document content is invalid
         console.warn('Invalid document content, setting default');
         setEditorContent([{ type: 'paragraph', children: [{ text: '' }] }]);
       }
       
-      // If the document has an updated_at timestamp, use that for last saved
       if (document.updated_at) {
         setLastSaved(new Date(document.updated_at));
       }
@@ -123,7 +113,6 @@ const DocumentPage = () => {
     }
   }, [document]);
 
-  // Clear auto-save timer when component unmounts
   useEffect(() => {
     return () => {
       if (autoSaveTimerRef.current !== null) {
@@ -132,29 +121,24 @@ const DocumentPage = () => {
     };
   }, []);
 
-  // Setup auto-save functionality
   const setupAutoSave = useCallback(() => {
-    // Clear any existing timer
     if (autoSaveTimerRef.current !== null) {
       window.clearTimeout(autoSaveTimerRef.current);
     }
     
-    // Only set up auto-save if there are changes to save
     if (hasChanges && user && id) {
       console.log('Setting up auto-save timer');
       autoSaveTimerRef.current = window.setTimeout(() => {
         console.log('Auto-saving document');
         saveDocument();
-      }, 60000); // Auto-save after 60 seconds of inactivity
+      }, 60000);
     }
   }, [hasChanges, user, id, saveDocument]);
 
-  // Set up auto-save whenever hasChanges changes
   useEffect(() => {
     setupAutoSave();
   }, [hasChanges, setupAutoSave]);
 
-  // Handle content changes
   const handleContentChange = useCallback((newContent: Descendant[]) => {
     console.log('Content changed in document page, length:', newContent.length);
     
@@ -168,18 +152,11 @@ const DocumentPage = () => {
       newContent = [{ type: 'paragraph', children: [{ text: '' }] }];
     }
     
-    // Log first couple of nodes for debugging
-    if (newContent.length > 0) {
-      console.log('First node:', JSON.stringify(newContent[0]));
-    }
-    
-    // Create a deep copy to ensure we break references
     try {
       const contentCopy = JSON.parse(JSON.stringify(newContent));
       setEditorContent(contentCopy);
       setHasChanges(true);
       
-      // Reset auto-save timer
       setupAutoSave();
     } catch (err) {
       console.error('Error processing content change:', err);
@@ -191,7 +168,6 @@ const DocumentPage = () => {
     }
   }, [setupAutoSave]);
 
-  // Handle saving the document
   const handleSave = useCallback(() => {
     if (!user) {
       toast({
@@ -217,10 +193,8 @@ const DocumentPage = () => {
       setEditorContent([{ type: 'paragraph', children: [{ text: '' }] }]);
     }
 
-    // Log the content being saved
     console.log('Manual save triggered, content length:', editorContent.length);
     
-    // Clear auto-save timer when manually saving
     if (autoSaveTimerRef.current !== null) {
       window.clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = null;
@@ -228,15 +202,13 @@ const DocumentPage = () => {
     
     saveDocument();
   }, [user, saveDocument, editorContent]);
-  
-  // Handle title change
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDocumentTitle(e.target.value);
     setHasChanges(true);
     setupAutoSave();
   };
 
-  // Prompt before leaving if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasChanges) {
@@ -249,7 +221,6 @@ const DocumentPage = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasChanges]);
 
-  // Redirect to auth if not logged in
   useEffect(() => {
     if (!user && !isLoading) {
       navigate('/auth');

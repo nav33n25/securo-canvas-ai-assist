@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { getDocuments, createDocument } from '@/services/documentService';
+import { getDocuments, createDocument, Document } from '@/services/documentService';
 import { toast } from '@/components/ui/use-toast';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getTemplates, createDocumentFromTemplate } from '@/services/documentService';
+import { getTemplates, createDocumentFromTemplate, DocumentTemplate } from '@/services/documentService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import AppLayout from '@/components/layout/AppLayout';
@@ -16,7 +16,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Shield, FileText } from 'lucide-react';
 
@@ -63,13 +62,13 @@ const TemplatesPage = () => {
   };
   
   // Group templates by category
-  const templatesByCategory = templates.reduce((acc: Record<string, any[]>, template) => {
+  const templatesByCategory: Record<string, DocumentTemplate[]> = templates.reduce((acc, template) => {
     if (!acc[template.category]) {
       acc[template.category] = [];
     }
     acc[template.category].push(template);
     return acc;
-  }, {});
+  }, {} as Record<string, DocumentTemplate[]>);
 
   if (error) {
     return (
