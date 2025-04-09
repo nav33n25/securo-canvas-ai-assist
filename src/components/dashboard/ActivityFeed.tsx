@@ -6,17 +6,7 @@ import { Link } from 'react-router-dom';
 import { FileText, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-
-export interface ActivityItem {
-  id: string;
-  type: 'document_updated' | 'document_created' | 'comment_added' | 'role_changed' | 'joined';
-  document_id?: string;
-  document_title?: string;
-  user_id: string;
-  user_name?: string;
-  created_at: string;
-  content?: string;
-}
+import { ActivityItem } from '@/services/activityService';
 
 interface ActivityFeedProps {
   activities: ActivityItem[];

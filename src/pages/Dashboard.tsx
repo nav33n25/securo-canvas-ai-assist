@@ -1,8 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   BarChart, 
   CalendarDays, 
@@ -24,11 +22,14 @@ import {
   Clock
 } from 'lucide-react';
 
-import ActivityFeed, { ActivityItem } from '@/components/dashboard/ActivityFeed';
-import RecentDocumentsSection, { RecentDocument } from '@/components/dashboard/RecentDocumentsSection';
+import { ActivityItem, fetchActivityFeed } from '@/services/activityService';
+import { RecentDocument, fetchRecentDocuments } from '@/services/documentService';
+import ActivityFeed from '@/components/dashboard/ActivityFeed';
+import RecentDocumentsSection from '@/components/dashboard/RecentDocumentsSection';
 import QuickAccessWidgets, { DashboardWidget } from '@/components/dashboard/QuickAccessWidgets';
 import UserRoleCard from '@/components/dashboard/UserRoleCard';
 import AllModulesGrid from '@/components/dashboard/AllModulesGrid';
+import WelcomeSection from '@/components/dashboard/WelcomeSection';
 
 const dashboardWidgets: DashboardWidget[] = [
   {
@@ -149,131 +150,35 @@ const Dashboard: React.FC = () => {
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   
   useEffect(() => {
-    const fetchRecentDocuments = async () => {
+    const loadRecentDocuments = async () => {
       if (!user) return;
       
-      try {
-        setIsLoadingDocuments(true);
-        const { data, error } = await supabase
-          .from('documents')
-          .select('id, title, updated_at, status')
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false })
-          .limit(5);
-          
-        if (error) throw error;
-        
-        setRecentDocuments(data || []);
-      } catch (error) {
-        console.error('Error fetching recent documents:', error);
-      } finally {
-        setIsLoadingDocuments(false);
-      }
+      setIsLoadingDocuments(true);
+      const documents = await fetchRecentDocuments(user.id);
+      setRecentDocuments(documents);
+      setIsLoadingDocuments(false);
     };
     
-    fetchRecentDocuments();
+    loadRecentDocuments();
   }, [user]);
   
   useEffect(() => {
-    const fetchActivityFeed = async () => {
+    const loadActivityFeed = async () => {
       if (!user) return;
       
-      try {
-        setIsLoadingActivities(true);
-        
-        const { data, error } = await supabase
-          .from('document_versions')
-          .select(`
-            id, 
-            created_at, 
-            change_summary,
-            document_id,
-            documents(title),
-            profiles(first_name, last_name)
-          `)
-          .limit(10)
-          .order('created_at', { ascending: false });
-          
-        if (error) throw error;
-        
-        const transformedActivities: ActivityItem[] = (data || []).map(item => {
-          let firstName = '';
-          let lastName = '';
-          
-          // Fix for TS18047: Add proper null checking for item.profiles
-          if (item.profiles && 
-              typeof item.profiles === 'object' && 
-              item.profiles !== null && 
-              !('error' in item.profiles)) {
-            // Extract profile data with proper type assertion
-            const profileData = item.profiles as { first_name?: string; last_name?: string };
-            firstName = profileData.first_name || '';
-            lastName = profileData.last_name || '';
-          }
-          
-          return {
-            id: item.id,
-            type: 'document_updated',
-            document_id: item.document_id,
-            document_title: item.documents?.title || 'Untitled Document',
-            user_id: user.id,
-            user_name: `${firstName} ${lastName}`.trim(),
-            created_at: item.created_at,
-            content: item.change_summary || 'Updated document'
-          };
-        });
-        
-        setActivities(transformedActivities);
-      } catch (error) {
-        console.error('Error fetching activity feed:', error);
-      } finally {
-        setIsLoadingActivities(false);
-      }
+      setIsLoadingActivities(true);
+      const activities = await fetchActivityFeed(user.id);
+      setActivities(activities);
+      setIsLoadingActivities(false);
     };
     
-    fetchActivityFeed();
+    loadActivityFeed();
   }, [user]);
-  
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
-  
-  const getDisplayName = () => {
-    if (profile?.first_name) {
-      return profile.first_name;
-    }
-    return 'there';
-  };
-  
-  const getWelcomeMessage = () => {
-    switch(role) {
-      case 'individual':
-        return 'Welcome to your personal security workspace';
-      case 'team_member':
-        return 'Access tools to support your security team';
-      case 'team_manager':
-        return 'Manage your security team and resources';
-      case 'administrator':
-        return 'Administer the SecureCanvas platform';
-      default:
-        return 'Welcome to SecureCanvas';
-    }
-  };
   
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-1">
-            {getGreeting()}, {getDisplayName()}
-          </h1>
-          <p className="text-muted-foreground">
-            {getWelcomeMessage()}
-          </p>
-        </div>
+        <WelcomeSection firstName={profile?.first_name} role={role} />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

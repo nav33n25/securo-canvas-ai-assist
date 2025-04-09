@@ -6,13 +6,7 @@ import { Link } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-
-export interface RecentDocument {
-  id: string;
-  title: string;
-  updated_at: string;
-  status?: string;
-}
+import { RecentDocument } from '@/services/documentService';
 
 interface RecentDocumentsSectionProps {
   documents: RecentDocument[];
