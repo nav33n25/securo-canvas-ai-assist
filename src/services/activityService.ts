@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ActivityItem {
@@ -36,8 +35,7 @@ export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]>
       // Fix for TS18047: Add proper null checking for item.profiles
       if (item.profiles && 
           typeof item.profiles === 'object' && 
-          item.profiles !== null && 
-          !('error' in item.profiles)) {
+          item.profiles !== null) {
         // Extract profile data with proper type assertion
         const profileData = item.profiles as { first_name?: string; last_name?: string };
         firstName = profileData.first_name || '';
