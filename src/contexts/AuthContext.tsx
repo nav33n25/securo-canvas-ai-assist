@@ -143,41 +143,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Add email from the user object if available
         const { data } = await supabase.auth.getUser();
         if (data?.user?.email) {
-          const profileWithEmail: UserProfile = {
+          const profileWithEmail = {
             ...(profileData as UserProfile),
             email: data.user.email
           };
           setProfile(profileWithEmail);
           
-          // Set user role from profile
-          if (profileWithEmail.role) {
-            setRole(profileWithEmail.role as UserRole);
-          } else {
-            // Default to individual if no role is set
-            setRole('individual');
-            // Update the profile with the default role
-            await supabase
-              .from('profiles')
-              .update({ role: 'individual' })
-              .eq('id', userId);
-          }
-          
-          // Set subscription plan from profile
-          if (profileWithEmail.subscription_plan) {
-            setSubscriptionPlan(profileWithEmail.subscription_plan as SubscriptionPlan);
-          } else {
-            // Default to free plan if no plan is set
-            setSubscriptionPlan('free');
-            // Update the profile with the default plan
-            await supabase
-              .from('profiles')
-              .update({ subscription_plan: 'free' })
-              .eq('id', userId);
-          }
-        } else {
-          setProfile(profileData as UserProfile);
-          
-          // Set user role from profile
+          // Set user role from profile if available
           if (profileData.role) {
             setRole(profileData.role as UserRole);
           } else {
@@ -190,7 +162,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .eq('id', userId);
           }
           
-          // Set subscription plan from profile
+          // Set subscription plan from profile if available
+          if (profileData.subscription_plan) {
+            setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
+          } else {
+            // Default to free plan if no plan is set
+            setSubscriptionPlan('free');
+            // Update the profile with the default plan
+            await supabase
+              .from('profiles')
+              .update({ subscription_plan: 'free' })
+              .eq('id', userId);
+          }
+        } else {
+          setProfile(profileData as UserProfile);
+          
+          // Set user role from profile if available
+          if (profileData.role) {
+            setRole(profileData.role as UserRole);
+          } else {
+            // Default to individual if no role is set
+            setRole('individual');
+            // Update the profile with the default role
+            await supabase
+              .from('profiles')
+              .update({ role: 'individual' })
+              .eq('id', userId);
+          }
+          
+          // Set subscription plan from profile if available
           if (profileData.subscription_plan) {
             setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
           } else {

@@ -11,9 +11,8 @@ import RoleSelection from '@/components/auth/RoleSelection';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { CheckIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckIcon } from 'lucide-react';
 
 export interface PlanInfo {
   id: SubscriptionPlan;
@@ -181,16 +180,16 @@ const Auth = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-muted/40">
-      <div className="relative hidden h-full flex-1 items-center justify-center bg-muted lg:flex">
+    <div className="flex min-h-screen bg-[#111827]">
+      <div className="relative hidden h-full flex-1 items-center justify-center bg-[#141e33] lg:flex">
         <div className="max-w-md px-6 text-center">
           <img
             src="/logo.svg"
             alt="Logo"
             className="mx-auto h-12 w-12"
           />
-          <h1 className="mt-6 text-3xl font-bold">SecuroCanvas</h1>
-          <p className="mt-2 text-lg text-muted-foreground">
+          <h1 className="mt-6 text-3xl font-bold text-white">SecuroCanvas</h1>
+          <p className="mt-2 text-lg text-gray-300">
             Secure document management for teams and individuals
           </p>
         </div>
@@ -204,15 +203,15 @@ const Auth = () => {
                 alt="Logo"
                 className="h-12 w-12 lg:hidden"
               />
-              <h2 className="mt-6 text-2xl font-bold">
+              <h2 className="mt-6 text-2xl font-bold text-white">
                 {isSignUp ? 'Create an account' : 'Sign in to your account'}
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm text-gray-400">
                 {isSignUp 
                   ? 'Already have an account? ' 
                   : 'Don\'t have an account? '}
                 <button
-                  className="text-primary hover:underline"
+                  className="text-blue-400 hover:underline"
                   onClick={() => handleTabChange(isSignUp ? 'signIn' : 'signUp')}
                 >
                   {isSignUp ? 'Sign in' : 'Create one'}
@@ -225,15 +224,15 @@ const Auth = () => {
               onValueChange={handleTabChange}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signIn">Sign In</TabsTrigger>
-                <TabsTrigger value="signUp">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 bg-[#1d283a]">
+                <TabsTrigger value="signIn" className="text-gray-200">Sign In</TabsTrigger>
+                <TabsTrigger value="signUp" className="text-gray-200">Sign Up</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signIn">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-1">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className="text-gray-200">Email</Label>
                     <Input
                       id="email"
                       placeholder="your@email.com"
@@ -241,14 +240,15 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="bg-[#1d283a] border-gray-700 text-white"
                     />
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password" className="text-gray-200">Password</Label>
                       <Link
                         to="/forgot-password"
-                        className="text-xs text-muted-foreground hover:text-primary"
+                        className="text-xs text-gray-400 hover:text-blue-400"
                       >
                         Forgot password?
                       </Link>
@@ -260,9 +260,16 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      className="bg-[#1d283a] border-gray-700 text-white"
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    variant="primary" 
+                    size="full" 
+                    className="mt-4" 
+                    disabled={loading}
+                  >
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
