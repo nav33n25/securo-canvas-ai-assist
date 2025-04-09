@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +53,7 @@ const Unauthorized: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration:.5 }}
+        transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
         <Card className="border-red-200 dark:border-red-900">
@@ -108,4 +109,4 @@ const Unauthorized: React.FC = () => {
   );
 };
 
-export default Unauthorized; 
+export default Unauthorized;
