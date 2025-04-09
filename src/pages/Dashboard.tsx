@@ -205,8 +205,9 @@ const Dashboard: React.FC = () => {
               typeof item.profiles === 'object' && 
               item.profiles !== null && 
               !('error' in item.profiles)) {
-            firstName = item.profiles.first_name || '';
-            lastName = item.profiles.last_name || '';
+            // Use optional chaining to safely access potentially null properties
+            firstName = item.profiles?.first_name || '';
+            lastName = item.profiles?.last_name || '';
           }
           
           return {
