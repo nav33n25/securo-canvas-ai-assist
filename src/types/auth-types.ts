@@ -16,14 +16,14 @@ import type {
 export type UserRole = CombinedUserRole;
 
 // Export SubscriptionTier type directly
-export type { UsohSubscriptionTier as SubscriptionTier };
+export type SubscriptionTier = UsohSubscriptionTier;
 export type DetailedUserRole = UsohDetailedUserRole;
 
 // Define the subscription plan type (for backward compatibility)
 export type SubscriptionPlan = 'free' | 'pro' | 'team' | 'enterprise';
 
 // Map subscription tier to subscription plan for backward compatibility
-export const tierToPlanMap: Record<UsohSubscriptionTier, SubscriptionPlan> = {
+export const tierToPlanMap: Record<SubscriptionTier, SubscriptionPlan> = {
   'individual': 'free',
   'professional': 'pro',
   'smb': 'team',
@@ -31,7 +31,7 @@ export const tierToPlanMap: Record<UsohSubscriptionTier, SubscriptionPlan> = {
 };
 
 // Plan to role mapping for backward compatibility
-export const planRoles: Record<UsohSubscriptionTier, UserRole[]> = {
+export const planRoles: Record<SubscriptionTier, UserRole[]> = {
   'individual': ['individual', 'individual_basic'],
   'professional': ['individual', 'individual_professional'],
   'smb': [
@@ -57,7 +57,7 @@ export interface UserProfile {
   job_title?: string | null;
   role?: UserRole;
   subscription_plan?: SubscriptionPlan;
-  subscription_tier?: UsohSubscriptionTier;
+  subscription_tier?: SubscriptionTier;
   team_id?: string;
   expertise_areas?: string[];
   bio?: string;
@@ -76,7 +76,7 @@ export type AuthContextType = {
   redirectTo: string | null;
   role: UserRole | null;
   subscriptionPlan: SubscriptionPlan | null;
-  subscriptionTier: UsohSubscriptionTier | null;
+  subscriptionTier: SubscriptionTier | null;
   team: string | null;
   hasPermission: (requiredPermissions: string[]) => boolean;
   canUseFeature: (featureKey: string) => Promise<boolean>;
@@ -87,12 +87,12 @@ export type AuthContextType = {
     firstName: string;
     lastName: string;
     role?: UserRole | LegacyUserRole;
-    subscriptionTier?: UsohSubscriptionTier;
+    subscriptionTier?: SubscriptionTier;
   }) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   setUserRole: (role: UserRole) => Promise<void>;
-  setUserSubscriptionTier: (tier: UsohSubscriptionTier) => Promise<void>;
+  setUserSubscriptionTier: (tier: SubscriptionTier) => Promise<void>;
   joinTeam: (teamId: string, role?: string) => Promise<void>;
   leaveTeam: (teamId: string) => Promise<void>;
   getRoleCategory: () => 'individual' | 'team' | 'management' | 'administrative';
