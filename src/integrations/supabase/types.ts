@@ -203,6 +203,8 @@ export type Database = {
           id: string
           job_title: string | null
           last_name: string | null
+          role: string | null
+          subscription_plan: string | null
           updated_at: string
         }
         Insert: {
@@ -212,6 +214,8 @@ export type Database = {
           id: string
           job_title?: string | null
           last_name?: string | null
+          role?: string | null
+          subscription_plan?: string | null
           updated_at?: string
         }
         Update: {
@@ -221,6 +225,8 @@ export type Database = {
           id?: string
           job_title?: string | null
           last_name?: string | null
+          role?: string | null
+          subscription_plan?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -251,6 +257,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      subscription_plan: "free" | "pro" | "team" | "enterprise"
       user_role: "admin" | "editor" | "viewer"
     }
     CompositeTypes: {
@@ -367,6 +374,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      subscription_plan: ["free", "pro", "team", "enterprise"],
       user_role: ["admin", "editor", "viewer"],
     },
   },

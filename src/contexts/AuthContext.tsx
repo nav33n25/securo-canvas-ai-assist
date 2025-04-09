@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
@@ -155,8 +156,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(profileWithEmail);
           
           // Set user role from profile if available
-          if (profileData.role) {
-            setRole(profileData.role as UserRole);
+          if ((profileData as UserProfile).role) {
+            setRole((profileData as UserProfile).role as UserRole);
           } else {
             // Default to individual if no role is set
             setRole('individual');
@@ -168,8 +169,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           // Set subscription plan from profile if available
-          if (profileData.subscription_plan) {
-            setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
+          if ((profileData as UserProfile).subscription_plan) {
+            setSubscriptionPlan((profileData as UserProfile).subscription_plan as SubscriptionPlan);
           } else {
             // Default to free plan if no plan is set
             setSubscriptionPlan('free');
@@ -183,8 +184,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(profileData as UserProfile);
           
           // Set user role from profile if available
-          if (profileData.role) {
-            setRole(profileData.role as UserRole);
+          if ((profileData as UserProfile).role) {
+            setRole((profileData as UserProfile).role as UserRole);
           } else {
             // Default to individual if no role is set
             setRole('individual');
@@ -196,8 +197,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           // Set subscription plan from profile if available
-          if (profileData.subscription_plan) {
-            setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
+          if ((profileData as UserProfile).subscription_plan) {
+            setSubscriptionPlan((profileData as UserProfile).subscription_plan as SubscriptionPlan);
           } else {
             // Default to free plan if no plan is set
             setSubscriptionPlan('free');
@@ -213,14 +214,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(profileData as UserProfile);
         
         // Still set the role and plan
-        if (profileData.role) {
-          setRole(profileData.role as UserRole);
+        if ((profileData as UserProfile).role) {
+          setRole((profileData as UserProfile).role as UserRole);
         } else {
           setRole('individual');
         }
         
-        if (profileData.subscription_plan) {
-          setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
+        if ((profileData as UserProfile).subscription_plan) {
+          setSubscriptionPlan((profileData as UserProfile).subscription_plan as SubscriptionPlan);
         } else {
           setSubscriptionPlan('free');
         }
