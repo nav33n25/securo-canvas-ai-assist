@@ -30,6 +30,22 @@ export interface RolePermission {
   description: string;
 }
 
+// Map between legacy UserRole and combined roles
+export const userRoleMap: Record<UserRole, CombinedUserRole[]> = {
+  'individual': ['individual_basic', 'individual_professional'],
+  'team_member': ['team_analyst', 'team_hunter', 'team_researcher', 'team_red', 'team_blue'],
+  'team_manager': ['team_lead', 'team_manager', 'security_manager', 'ciso_director'],
+  'administrator': ['platform_admin', 'knowledge_admin']
+};
+
+// Map between subscription tiers and allowed roles
+export const subscriptionTierRoleMap: Record<SubscriptionTier, CombinedUserRole[]> = {
+  'free': ['individual_basic'],
+  'professional': ['individual_professional'],
+  'team': ['team_analyst', 'team_hunter', 'team_researcher', 'team_lead', 'team_manager'],
+  'enterprise': ['team_red', 'team_blue', 'security_manager', 'ciso_director', 'platform_admin', 'knowledge_admin']
+};
+
 export const rolePermissions: Record<string, string[]> = {
   'individual': [
     'view_own_documents',

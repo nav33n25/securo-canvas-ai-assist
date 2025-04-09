@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ActivityItem {
@@ -70,4 +69,23 @@ export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]>
     console.error('Error fetching activity feed:', error);
     return [];
   }
+};
+
+export const formatActivityItems = (items: any[]) => {
+  return items.map(item => {
+    return {
+      id: item.id || `temp-${Date.now()}-${Math.random()}`,
+      type: 'document_updated',
+      document_id: item.document_id || undefined,
+      document_title: item.documents?.title || 'Untitled Document',
+      user_id: item.user_id,
+      user_name: item.profiles ? `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}`.trim() : 'Unknown User',
+      created_at: item.created_at || new Date().toISOString(),
+      content: item.change_summary || 'Updated document',
+      user: {
+        name: item.profiles ? `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}`.trim() : 'Unknown User',
+        avatar: item.profiles ? item.profiles.avatar_url : null,
+      }
+    };
+  });
 };
