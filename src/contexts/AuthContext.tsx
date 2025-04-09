@@ -30,10 +30,19 @@ type AuthContextType = {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  isAuthenticated: boolean;
+  redirectTo: string | null;
   role: UserRole | null;
   subscriptionPlan: SubscriptionPlan | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, firstName: string, lastName: string, role?: UserRole, plan?: SubscriptionPlan) => Promise<void>;
+  signUp: (options: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role?: UserRole;
+    plan?: SubscriptionPlan;
+  }) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   setUserRole: (role: UserRole) => Promise<void>;
@@ -66,7 +75,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Computed property to check if authenticated
+  const isAuthenticated = !!session && !!user;
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -245,51 +258,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string,
-    role: UserRole = 'individual',
-    plan: SubscriptionPlan = 'free'
-  ) => {
+  const signUp = async ({
+    email,
+    password,
+    firstName,
+    lastName,
+    role = 'individual',
+    plan = 'free'
+  }: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role?: UserRole;
+    plan?: SubscriptionPlan;
+  }) => {
     setLoading(true);
     
     try {
       // In development mode, all plans are free
       // No payment processing needed
       
-      const userData = {
+      // Create the user in Supabase
+      const { data: authData, error } = await supabase.auth.signUp({
         email,
-        firstName,
-        lastName,
-        role,
-        plan,
-        createdAt: new Date().toISOString(),
-        // In production, this would include payment information
-        subscription: {
-          status: 'active',
-          plan,
-          // In development mode, we're simulating an active subscription
-          trialEndsAt: null,
-          devMode: true
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            role,
+            subscription_plan: plan
+          }
         }
-      };
-      
-      // Simulate account creation delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Store the user data in localStorage for demo purposes
-      // In production, this would be stored in a backend database
-      localStorage.setItem('secureCanvasUser', JSON.stringify(userData));
-      
-      setUser(userData);
-      toast({
-        title: "Account created successfully",
-        description: "Welcome to SecureCanvas! (Development Mode)",
       });
+
+      if (error) throw error;
       
-      return userData;
+      if (authData.user) {
+        // Update the profile with additional information
+        await supabase.from('profiles').update({
+          first_name: firstName,
+          last_name: lastName,
+          role,
+          subscription_plan: plan
+        }).eq('id', authData.user.id);
+
+        // Set the user data
+        setUser(authData.user);
+        setSession(authData.session);
+        
+        // Set role and subscription plan
+        setRole(role);
+        setSubscriptionPlan(plan);
+        
+        toast({
+          title: "Account created successfully",
+          description: "Welcome to SecuroCanvas!",
+        });
+      }
     } catch (error) {
       toast({
         variant: "destructive",
@@ -461,6 +488,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     profile,
     loading,
+    isAuthenticated,
+    redirectTo,
     role,
     subscriptionPlan,
     signIn,
