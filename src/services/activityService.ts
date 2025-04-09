@@ -43,11 +43,11 @@ export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]>
       let firstName = '';
       let lastName = '';
       
-      // Safely extract profile data with proper null checks
+      // Fix the TypeScript errors by adding null checks
       if (item.profiles && typeof item.profiles === 'object') {
-        // Check if the properties exist before accessing them
-        firstName = item.profiles.first_name || '';
-        lastName = item.profiles.last_name || '';
+        // Use optional chaining to safely access potentially null properties
+        firstName = item.profiles?.first_name || '';
+        lastName = item.profiles?.last_name || '';
       }
       
       // Safely extract document title
