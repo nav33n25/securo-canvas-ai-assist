@@ -246,73 +246,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (
-    email: string, 
-    password: string, 
-    firstName: string, 
-    lastName: string, 
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
     role: UserRole = 'individual',
     plan: SubscriptionPlan = 'free'
   ) => {
+    setLoading(true);
+    
     try {
-      // Validate that the role is allowed for the plan
-      if (!planRoles[plan].includes(role)) {
-        toast({
-          variant: "destructive",
-          title: "Invalid role selection",
-          description: `The selected role is not available for the ${plan} plan.`,
-        });
-        return;
-      }
+      // In development mode, all plans are free
+      // No payment processing needed
       
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            role: role,
-            subscription_plan: plan
-          }
+      const userData = {
+        email,
+        firstName,
+        lastName,
+        role,
+        plan,
+        createdAt: new Date().toISOString(),
+        // In production, this would include payment information
+        subscription: {
+          status: 'active',
+          plan,
+          // In development mode, we're simulating an active subscription
+          trialEndsAt: null,
+          devMode: true
         }
+      };
+      
+      // Simulate account creation delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Store the user data in localStorage for demo purposes
+      // In production, this would be stored in a backend database
+      localStorage.setItem('secureCanvasUser', JSON.stringify(userData));
+      
+      setUser(userData);
+      toast({
+        title: "Account created successfully",
+        description: "Welcome to SecureCanvas! (Development Mode)",
       });
-
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Registration failed",
-          description: error.message,
-        });
-      } else {
-        // Create profile record
-        if (data.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              first_name: firstName,
-              last_name: lastName,
-              role: role,
-              subscription_plan: plan
-            });
-            
-          if (profileError) {
-            console.error('Error creating profile:', profileError);
-          }
-        }
-        
-        toast({
-          title: "Registration successful",
-          description: "Please check your email for confirmation.",
-        });
-        navigate('/auth?tab=signin');
-      }
-    } catch (error: any) {
+      
+      return userData;
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An error occurred during registration",
       });
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

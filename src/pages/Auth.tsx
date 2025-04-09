@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate, useLocation, useRouter } from 'react-router-dom';
 import { useAuth, UserRole, SubscriptionPlan, planRoles } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, Check, CreditCard } from 'lucide-react';
 import RoleSelection from '@/components/auth/RoleSelection';
 import { toast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { CheckIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 
 // Define subscription plans and their allowed roles
 export interface PlanInfo {
@@ -18,345 +23,473 @@ export interface PlanInfo {
   price: string;
   allowedRoles: UserRole[];
   recommended?: boolean;
+  tag?: string;
+  features: string[];
 }
 
-const subscriptionPlans: PlanInfo[] = [
+const plans: PlanInfo[] = [
   {
     id: 'free',
     name: 'Free',
-    description: 'For students and security enthusiasts',
+    description: 'Basic features for personal use',
     price: 'Free',
     allowedRoles: planRoles.free,
+    tag: 'Basic',
+    features: [
+      'Basic document encryption',
+      'Up to 3 secure documents',
+      'Personal workspace',
+      'Email support'
+    ],
   },
   {
     id: 'pro',
-    name: 'Professional',
-    description: 'For security professionals and consultants',
+    name: 'Pro',
+    description: 'Advanced features for professionals',
     price: '$19/month',
     allowedRoles: planRoles.pro,
     recommended: true,
+    tag: 'Popular',
+    features: [
+      'Advanced encryption options',
+      'Unlimited secure documents',
+      'Collaboration tools',
+      'Priority support',
+      'Audit trails'
+    ],
   },
   {
     id: 'team',
     name: 'Team',
-    description: 'For security teams and departments',
+    description: 'Essential tools for small teams',
     price: '$49/month',
     allowedRoles: planRoles.team,
+    tag: 'Team',
+    features: [
+      'Everything in Pro',
+      'Team management',
+      'Role-based access control',
+      'Dedicated support',
+      'Analytics dashboard'
+    ],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    description: 'Full platform access for organizations',
+    description: 'Enhanced security for organizations',
     price: '$99/month',
     allowedRoles: planRoles.enterprise,
+    tag: 'Enterprise',
+    features: [
+      'Everything in Team',
+      'Custom security policies',
+      'Advanced admin controls',
+      'API access',
+      'Dedicated account manager',
+      'On-premises deployment option'
+    ],
   }
 ];
 
 const Auth = () => {
-  const { user, loading, signIn, signUp } = useAuth();
+  const { signIn, signUp, isAuthenticated, redirectTo } = useAuth();
+  const router = useRouter();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const defaultTab = searchParams.get('tab') || 'signin';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showRoleSelection, setShowRoleSelection] = useState(false);
-  const [showPlanSelection, setShowPlanSelection] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole>('individual');
+  const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState<UserRole | null>(null);
+  const [plan, setPlan] = useState<SubscriptionPlan>('free');
+  const [step, setStep] = useState(1);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanInfo | null>(null);
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setLoading(true);
     await signIn(email, password);
-    setIsSubmitting(false);
+    setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    if (step < 3) {
+      // Just move to next step if we're not on the final step
+      setStep(step + 1);
+      return;
+    }
     
-    if (!showPlanSelection && !showRoleSelection) {
-      // First step: Show plan selection
-      setShowPlanSelection(true);
-      setIsSubmitting(false);
-    } else if (showPlanSelection && !showRoleSelection) {
-      // Second step: Show role selection
-      setShowPlanSelection(false);
-      setShowRoleSelection(true);
-      setIsSubmitting(false);
-    } else {
-      if (!selectedPlan) {
-        toast({
-          variant: "destructive",
-          title: "No plan selected",
-          description: "Please select a subscription plan.",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Final step: Complete sign up with selected role and plan
-      await signUp(email, password, firstName, lastName, selectedRole, selectedPlan.id);
-      setIsSubmitting(false);
-      // Reset selection views
-      setShowRoleSelection(false);
-      setShowPlanSelection(false);
+    if (!email || !password || !firstName || !lastName || !role || !plan) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signUp({
+        email,
+        password,
+        firstName,
+        lastName,
+        role,
+        plan,
+      });
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Error signing up",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const handlePlanSelected = (plan: PlanInfo) => {
-    setSelectedPlan(plan);
-    
-    // Default to the highest role allowed by the plan
-    const highestRole = plan.allowedRoles[plan.allowedRoles.length - 1];
-    setSelectedRole(highestRole);
-  };
-  
-  const handleRoleSelected = (role: UserRole) => {
-    setSelectedRole(role);
-  };
-  
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    setShowRoleSelection(false);
-    setShowPlanSelection(false);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setStep(1);
+    setIsSignUp(tab === "signUp");
   };
 
-  const handleBackFromRoleSelection = () => {
-    setShowRoleSelection(false);
-    setShowPlanSelection(true);
-  };
-  
-  const handleBackFromPlanSelection = () => {
-    setShowPlanSelection(false);
-  };
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push(redirectTo || "/dashboard");
+    }
+  }, [isAuthenticated, redirectTo, router]);
 
-  if (!loading && user) {
+  if (!loading && isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Render the plan selection step
-  const renderPlanSelection = () => (
-    <div className="px-6 py-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {subscriptionPlans.map((plan) => (
-          <Card 
-            key={plan.id}
-            className={`cursor-pointer transition-all hover:shadow-md ${
-              selectedPlan?.id === plan.id ? 'ring-2 ring-secure bg-secure/5' : ''
-            } ${plan.recommended ? 'border-secure' : ''}`}
-            onClick={() => handlePlanSelected(plan)}
-          >
-            <CardContent className="p-4">
-              {plan.recommended && (
-                <div className="bg-secure text-white text-xs px-2 py-0.5 rounded absolute -mt-6 right-2">
-                  Recommended
-                </div>
-              )}
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium text-lg">{plan.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-2">{plan.description}</p>
-                </div>
-                {selectedPlan?.id === plan.id && (
-                  <Check className="h-5 w-5 text-secure" />
-                )}
-              </div>
-              <div className="text-xl font-bold">{plan.price}</div>
-              <div className="mt-3 text-xs text-muted-foreground">
-                Available roles: {plan.allowedRoles.map(role => 
-                  role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
-                ).join(', ')}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+  return (
+    <div className="flex min-h-screen bg-muted/40">
+      <div className="relative hidden h-full flex-1 items-center justify-center bg-muted lg:flex">
+        <div className="max-w-md px-6 text-center">
+          <img
+            src="/logo.svg"
+            alt="Logo"
+            className="mx-auto h-12 w-12"
+          />
+          <h1 className="mt-6 text-3xl font-bold">SecuroCanvas</h1>
+          <p className="mt-2 text-lg text-muted-foreground">
+            Secure document management for teams and individuals
+          </p>
+        </div>
       </div>
-      <div className="flex justify-between mt-6">
-        <Button
-          variant="outline"
-          onClick={handleBackFromPlanSelection}
-        >
-          Back
-        </Button>
-        <Button 
-          onClick={handleSignUp}
-          className="bg-secure hover:bg-secure-darker"
-          disabled={!selectedPlan || isSubmitting}
-        >
-          <CreditCard className="h-4 w-4 mr-2" />
-          {isSubmitting ? 'Processing...' : 'Continue'}
-        </Button>
+      <div className="flex w-full flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+        <div className="mx-auto w-full max-w-sm lg:w-96">
+          <div className="space-y-6">
+            <div>
+              <img
+                src="/logo.svg"
+                alt="Logo"
+                className="h-12 w-12 lg:hidden"
+              />
+              <h2 className="mt-6 text-2xl font-bold">
+                {isSignUp ? 'Create an account' : 'Sign in to your account'}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {isSignUp 
+                  ? 'Already have an account? ' 
+                  : 'Don\'t have an account? '}
+                <button
+                  className="text-primary hover:underline"
+                  onClick={() => handleTabChange(isSignUp ? 'signIn' : 'signUp')}
+                >
+                  {isSignUp ? 'Sign in' : 'Create one'}
+                </button>
+              </p>
+            </div>
+
+            <Tabs
+              value={activeTab}
+              onValueChange={handleTabChange}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signIn">Sign In</TabsTrigger>
+                <TabsTrigger value="signUp">Sign Up</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="signIn">
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      placeholder="your@email.com"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <Link
+                        to="/forgot-password"
+                        className="text-xs text-muted-foreground hover:text-primary"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="signUp">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  {step === 1 && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="firstName">First Name</Label>
+                          <Input
+                            id="firstName"
+                            placeholder="John"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="lastName">Last Name</Label>
+                          <Input
+                            id="lastName"
+                            placeholder="Doe"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="signUpEmail">Email</Label>
+                        <Input
+                          id="signUpEmail"
+                          placeholder="your@email.com"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="signUpPassword">Password</Label>
+                        <Input
+                          id="signUpPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={!email || !password || !firstName || !lastName || password !== confirmPassword}
+                      >
+                        Continue
+                      </Button>
+                    </div>
+                  )}
+
+                  {step === 2 && (
+                    <div className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold">Choose a Plan</h3>
+                            <p className="text-sm text-muted-foreground">Select the plan that works best for you</p>
+                          </div>
+                          <span className="text-xs font-medium px-2 py-1 bg-amber-100 text-amber-800 rounded">DEV MODE - All Plans Free</span>
+                        </div>
+                        
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                          {plans.map((p) => (
+                            <PlanCard
+                              key={p.id}
+                              plan={p}
+                              selected={p.id === plan}
+                              onSelect={() => setPlan(p.id as SubscriptionPlan)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <Button variant="outline" onClick={() => setStep(1)}>
+                          Back
+                        </Button>
+                        <Button onClick={() => setStep(3)}>
+                          Continue
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 3 && (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold">Select Your Role</h3>
+                        <p className="text-sm text-muted-foreground">Choose the role that best describes you</p>
+                      </div>
+
+                      <RoleSelection
+                        initialRole={role}
+                        allowedRoles={plans.find(p => p.id === plan)?.allowedRoles || []}
+                        onRoleSelect={setRole}
+                        showContinueButton={false}
+                      />
+
+                      <div className="flex items-center justify-between">
+                        <Button variant="outline" onClick={() => setStep(2)}>
+                          Back
+                        </Button>
+                        <Button type="submit" disabled={loading || !role}>
+                          {loading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating account...
+                            </>
+                          ) : (
+                            "Sign Up"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </form>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </div>
     </div>
   );
+};
 
+const PlanCard = ({ plan, selected, onSelect }: { 
+  plan: PlanInfo; 
+  selected: boolean; 
+  onSelect: () => void 
+}) => {
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-background">
-      <div className="w-full max-w-md px-4">
-        <div className="mb-8 flex flex-col items-center justify-center text-center">
-          <Shield className="h-12 w-12 text-secure mb-2" />
-          <h1 className="text-2xl font-bold">SecureCanvas</h1>
-          <p className="text-muted-foreground">Security documentation platform</p>
+    <Card
+      className={`relative overflow-hidden transition-all hover:shadow-md cursor-pointer ${
+        selected ? 'ring-2 ring-primary' : ''
+      }`}
+      onClick={onSelect}
+    >
+      {plan.recommended && (
+        <Badge className="absolute right-2 top-2 z-10" variant="secondary">
+          Recommended
+        </Badge>
+      )}
+      {plan.tag && (
+        <Badge className="absolute left-2 top-2" variant="outline">
+          {plan.tag}
+        </Badge>
+      )}
+      <CardHeader className="pb-2">
+        <CardTitle>{plan.name}</CardTitle>
+        <CardDescription className="line-clamp-2">
+          {plan.description}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-baseline space-x-2">
+          <span className="text-2xl font-bold">{plan.price}</span>
+          {plan.id !== 'free' && (
+            <Badge variant="outline" className="text-green-600 bg-green-50">
+              Free in dev
+            </Badge>
+          )}
         </div>
-
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl">
-              {showRoleSelection 
-                ? "Select Your Role" 
-                : showPlanSelection 
-                ? "Choose Your Plan" 
-                : "Authentication"}
-            </CardTitle>
-            <CardDescription>
-              {showRoleSelection 
-                ? "Choose the role that best describes your security work" 
-                : showPlanSelection
-                ? "Select a plan that matches your security needs"
-                : "Sign in to your account or create a new one"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {showRoleSelection ? (
-              <div className="px-6 py-4">
-                <RoleSelection 
-                  initialRole={selectedRole}
-                  onRoleSelect={handleRoleSelected}
-                  showContinueButton={false}
-                  allowedRoles={selectedPlan?.allowedRoles || []}
-                />
-                <div className="flex justify-between mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={handleBackFromRoleSelection}
-                  >
-                    Back
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    onClick={handleSignUp}
-                    className="bg-secure hover:bg-secure-darker"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Creating account...' : 'Complete Registration'}
-                  </Button>
-                </div>
-              </div>
-            ) : showPlanSelection ? (
-              renderPlanSelection()
-            ) : (
-              <Tabs 
-                value={activeTab} 
-                onValueChange={handleTabChange}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="signin">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="signin" className="px-6">
-                  <form onSubmit={handleSignIn} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)} 
-                        required
-                        placeholder="email@example.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input 
-                        id="password" 
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-secure hover:bg-secure-darker"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? 'Signing in...' : 'Sign In'}
-                    </Button>
-                  </form>
-                </TabsContent>
-                
-                <TabsContent value="signup" className="px-6">
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input 
-                          id="firstName" 
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input 
-                          id="lastName" 
-                          value={lastName}
-                          onChange={(e) => setLastName(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="emailSignup">Email</Label>
-                      <Input 
-                        id="emailSignup" 
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        placeholder="email@example.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="passwordSignup">Password</Label>
-                      <Input 
-                        id="passwordSignup" 
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-secure hover:bg-secure-darker"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? 'Processing...' : 'Continue to Plan Selection'}
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-center pt-6">
-            <p className="text-xs text-muted-foreground">
-              By continuing, you agree to our Terms of Service and Privacy Policy.
-            </p>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
+        
+        <ul className="mt-4 space-y-2 text-sm">
+          {plan.features.map((feature, i) => (
+            <li key={i} className="flex items-start">
+              <CheckIcon className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+      <CardFooter className="pt-0">
+        {selected ? (
+          <Badge className="w-full justify-center py-1.5" variant="default">
+            Selected
+          </Badge>
+        ) : (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={onSelect}
+          >
+            Select Plan
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   );
 };
 

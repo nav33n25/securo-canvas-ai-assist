@@ -169,9 +169,13 @@ const UserMenu = () => {
               <DropdownMenuSubTrigger>
                 <CreditCard className="mr-2 h-4 w-4" />
                 <span>Subscription Plan</span>
+                <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">DEV</span>
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent>
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground border-b">
+                    In development mode - no payment required
+                  </div>
                   <DropdownMenuItem 
                     onClick={() => handlePlanChange('free')}
                     disabled={subscriptionPlan === 'free'}
@@ -185,6 +189,7 @@ const UserMenu = () => {
                   >
                     <Star className="mr-2 h-4 w-4" />
                     <span>Professional ($19/month)</span>
+                    <span className="ml-auto text-[10px] text-green-600">Free in dev</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handlePlanChange('team')}
@@ -192,6 +197,7 @@ const UserMenu = () => {
                   >
                     <Users2 className="mr-2 h-4 w-4" />
                     <span>Team ($49/month)</span>
+                    <span className="ml-auto text-[10px] text-green-600">Free in dev</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handlePlanChange('enterprise')}
@@ -199,6 +205,7 @@ const UserMenu = () => {
                   >
                     <Crown className="mr-2 h-4 w-4" />
                     <span>Enterprise ($99/month)</span>
+                    <span className="ml-auto text-[10px] text-green-600">Free in dev</span>
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
