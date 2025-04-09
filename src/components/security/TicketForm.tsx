@@ -30,8 +30,7 @@ import {
   UserCircle2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { User } from '@supabase/supabase-js';
+import { useAuth } from '@/hooks/useAuth';
 import { useUsers } from '@/hooks/useUsers';
 import { 
   Popover,
@@ -42,6 +41,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+// Define the schema for ticket validation
 const ticketFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long' }).max(100),
   description: z.string().min(10, { message: 'Description must be at least 10 characters long' }),
@@ -54,6 +54,7 @@ const ticketFormSchema = z.object({
 
 type TicketFormValues = z.infer<typeof ticketFormSchema>;
 
+// Pre-defined ticket types
 const TICKET_TYPES = [
   'Vulnerability',
   'Incident Response',
@@ -81,27 +82,28 @@ export const TicketForm: React.FC<TicketFormProps> = ({
   const { users } = useUsers();
   const isEditMode = !!ticket;
 
-  const defaultValues = {
-    title: ticket?.title || '',
-    description: ticket?.description || '',
-    priority: ticket?.priority || 'medium',
-    ticket_type: ticket?.ticket_type || TICKET_TYPES[0],
-    status: ticket?.status || 'open',
-    assignee_id: ticket?.assignee_id || undefined,
-    due_date: ticket?.due_date ? new Date(ticket.due_date) : undefined,
-  };
-
+  // Initialize form with default values or existing ticket data
   const form = useForm<TicketFormValues>({
     resolver: zodResolver(ticketFormSchema),
-    defaultValues,
+    defaultValues: {
+      title: ticket?.title || '',
+      description: ticket?.description || '',
+      priority: ticket?.priority || 'medium',
+      ticket_type: ticket?.ticket_type || TICKET_TYPES[0],
+      status: ticket?.status || 'open',
+      assignee_id: ticket?.assignee_id || undefined,
+      due_date: ticket?.due_date ? new Date(ticket.due_date) : undefined,
+    },
   });
 
+  // Helper function to get user display name
   const getUserDisplayName = (userId: string | undefined): string => {
     if (!userId) return 'Unassigned';
     const user = users.find(u => u.id === userId);
     return user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
   };
 
+  // Form submission handler
   const handleSubmit = async (data: TicketFormValues) => {
     try {
       await onSubmit(data);
@@ -367,4 +369,4 @@ export const TicketForm: React.FC<TicketFormProps> = ({
   );
 };
 
-export default TicketForm;
+export default TicketForm; 

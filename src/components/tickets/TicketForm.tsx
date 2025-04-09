@@ -82,15 +82,8 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
           description: "Ticket updated successfully",
         });
       } else {
-        // Create new ticket - ensure all required fields are present
-        const ticketData: TicketCreateData = {
-          title: values.title,
-          description: values.description,
-          status: values.status,
-          priority: values.priority
-        };
-        
-        await createTicket(ticketData);
+        // Create new ticket
+        await createTicket(values);
         toast({
           title: "Success",
           description: "Ticket created successfully",
@@ -237,4 +230,4 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
       </Form>
     </div>
   );
-}
+} 

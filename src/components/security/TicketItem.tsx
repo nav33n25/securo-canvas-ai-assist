@@ -87,7 +87,8 @@ export const TicketItem: React.FC<TicketItemProps> = ({
   const { user, hasPermission } = useAuth();
   const { toast } = useToast();
 
-  const canManageTickets = hasPermission(['manage_team_tickets', 'manage_all_tickets']);
+  const canManageTickets = hasPermission('manage_team_tickets') || 
+                          hasPermission('manage_all_tickets');
   
   const handleStatusChange = async (newStatus: TicketStatus) => {
     if (!onStatusChange) return;
@@ -274,4 +275,4 @@ export const TicketItem: React.FC<TicketItemProps> = ({
   );
 };
 
-export default TicketItem;
+export default TicketItem; 
