@@ -15,6 +15,9 @@ import {
 // Export the combined user role type
 export type UserRole = CombinedUserRole;
 
+// Export SubscriptionTier type
+export { SubscriptionTier, DetailedUserRole };
+
 // Define the subscription plan type (for backward compatibility)
 export type SubscriptionPlan = 'free' | 'pro' | 'team' | 'enterprise';
 
@@ -83,13 +86,11 @@ export type AuthContextType = {
     firstName: string;
     lastName: string;
     role?: UserRole | LegacyUserRole;
-    subscriptionPlan?: SubscriptionPlan;
     subscriptionTier?: SubscriptionTier;
   }) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   setUserRole: (role: UserRole) => Promise<void>;
-  setUserPlan: (plan: SubscriptionPlan) => Promise<void>;
   setUserSubscriptionTier: (tier: SubscriptionTier) => Promise<void>;
   joinTeam: (teamId: string, role?: string) => Promise<void>;
   leaveTeam: (teamId: string) => Promise<void>;

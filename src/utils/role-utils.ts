@@ -1,6 +1,6 @@
 
 import { UserRole, SubscriptionTier } from '@/types/auth-types';
-import { DetailedUserRole } from '@/types/usoh';
+import type { DetailedUserRole } from '@/types/usoh';
 
 // Define subscription tier hierarchy
 export const subscriptionTierHierarchy: Record<SubscriptionTier, number> = {
@@ -60,7 +60,7 @@ export function getDetailedRole(
   subscriptionTier: SubscriptionTier | null
 ): DetailedUserRole | null {
   // If role is already a detailed role, return it
-  if (role && Object.values(DetailedUserRole).includes(role as any)) {
+  if (role && Object.keys(roleHierarchy).includes(role)) {
     return role as DetailedUserRole;
   }
   

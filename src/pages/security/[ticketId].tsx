@@ -75,7 +75,7 @@ const TicketDetailsPage: React.FC = () => {
     switch (status) {
       case 'open': return 'default';
       case 'in_progress': return 'secondary';
-      case 'resolved': return 'success';
+      case 'resolved': return 'default';
       case 'closed': return 'outline';
       default: return 'default';
     }
@@ -85,7 +85,7 @@ const TicketDetailsPage: React.FC = () => {
     switch (priority) {
       case 'low': return 'secondary';
       case 'medium': return 'default';
-      case 'high': return 'warning';
+      case 'high': return 'destructive';
       case 'critical': return 'destructive';
       default: return 'default';
     }
@@ -275,4 +275,4 @@ const TicketDetailsPage: React.FC = () => {
   );
 };
 
-export default TicketDetailsPage; 
+export default TicketDetailsPage;

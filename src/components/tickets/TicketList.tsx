@@ -43,11 +43,9 @@ export default function TicketList() {
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
 
-  // Apply filters
   useEffect(() => {
     let result = [...tickets];
     
-    // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(ticket => 
@@ -56,12 +54,10 @@ export default function TicketList() {
       );
     }
     
-    // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(ticket => ticket.status === statusFilter);
     }
     
-    // Apply priority filter
     if (priorityFilter !== 'all') {
       result = result.filter(ticket => ticket.priority === priorityFilter);
     }
@@ -88,7 +84,7 @@ export default function TicketList() {
   if (error) {
     return (
       <div className="text-center text-red-500">
-        Error loading tickets: {error}
+        Error loading tickets: {error.message || "Unknown error"}
       </div>
     );
   }
@@ -197,4 +193,4 @@ export default function TicketList() {
       )}
     </div>
   );
-} 
+}
