@@ -120,11 +120,42 @@ export async function queryPerplexityAI(
 
 // Security-specific prompts
 export const SECURITY_PROMPTS = {
-  vulnerabilityAssessment: "Please analyze the following system for vulnerabilities and provide recommendations: ",
-  securityPolicyGeneration: "Please generate a security policy for the following topic: ",
-  threatAnalysis: "Please analyze the following security threat and provide mitigation strategies: ",
-  complianceCheck: "Please check if the following practices comply with {framework} requirements: ",
-  incidentResponse: "Help me create an incident response plan for: "
+  vulnerabilityAssessment: `Please help me create a vulnerability assessment for the following system: 
+[System Description]
+
+Please include:
+1. Identified vulnerabilities
+2. Risk ratings
+3. Potential impact
+4. Recommended mitigations`,
+
+  securityPolicyGeneration: `Help me create a security policy for:
+[Organization/System]
+
+Please include:
+1. Policy purpose and scope
+2. Roles and responsibilities
+3. Security requirements
+4. Compliance requirements
+5. Enforcement mechanisms`,
+
+  complianceCheck: `Analyze the following for compliance with [Framework] requirements:
+[Description]
+
+Please provide:
+1. Compliance status assessment
+2. Gaps identified
+3. Recommended actions to achieve compliance`,
+
+  incidentResponse: `Help me create an incident response plan for:
+[Organization/System]
+
+Please include:
+1. Incident classification
+2. Roles and responsibilities
+3. Detection and reporting procedures
+4. Containment, eradication, and recovery steps
+5. Post-incident activities`
 };
 
 // Security utilities for API keys

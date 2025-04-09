@@ -31,6 +31,13 @@ const emptyEditorContent: Descendant[] = [{
   children: [{ text: '' }] 
 }];
 
+// Define template option type
+interface SecurityTemplateOption {
+  title: string;
+  roles: string[];
+  template: CustomElement[];
+}
+
 const DocumentEditor: React.FC<DocumentEditorProps> = ({ 
   initialValue, 
   onChange, 
@@ -272,8 +279,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
     return option.roles.includes(role);
   });
 
-  // Add function to insert template content
-  const insertSecurityTemplate = useCallback((templateOption) => {
+  // Update the insertSecurityTemplate function with proper typing
+  const insertSecurityTemplate = useCallback((templateOption: SecurityTemplateOption) => {
     editor.insertNodes(templateOption.template);
     setShowSecurityOptions(false);
   }, [editor]);

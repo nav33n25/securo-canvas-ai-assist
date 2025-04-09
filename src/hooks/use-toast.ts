@@ -189,3 +189,6 @@ function useToast() {
 }
 
 export { useToast, toast }
+
+// Re-export the use-toast from the UI component
+export { useToast } from '@/components/ui/use-toast';

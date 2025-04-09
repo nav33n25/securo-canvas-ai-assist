@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { IconType } from '@/types/common';
 
 type Workspace = {
   id: string;
@@ -78,16 +79,35 @@ const workspaces: Workspace[] = [
 ];
 
 const favoritePages = [
-  { name: 'Security Policies', path: '/documents/policies', icon: FileCheck },
-  { name: 'Vulnerability Dashboard', path: '/dashboard/vulnerabilities', icon: ShieldAlert },
-  { name: 'OWASP Top 10', path: '/knowledge-base/owasp', icon: Book },
+  { name: 'Security Policies', path: '/documents/policies', icon: FileCheck, iconComponent: FileCheck },
+  { name: 'Vulnerability Dashboard', path: '/dashboard/vulnerabilities', icon: ShieldAlert, iconComponent: ShieldAlert },
+  { name: 'OWASP Top 10', path: '/knowledge-base/owasp', icon: Book, iconComponent: Book },
 ];
 
 const recentPages = [
-  { name: 'Incident Response Plan', path: '/documents/incident-response', icon: FileText },
-  { name: 'NIST Compliance', path: '/compliance/nist', icon: CheckSquare },
-  { name: 'Asset Inventory', path: '/assets', icon: Database },
+  { name: 'Incident Response Plan', path: '/documents/incident-response', icon: FileText, iconComponent: FileText },
+  { name: 'NIST Compliance', path: '/compliance/nist', icon: CheckSquare, iconComponent: CheckSquare },
+  { name: 'Asset Inventory', path: '/assets', icon: Database, iconComponent: Database },
 ];
+
+// Add icon mapping for menu items
+const iconMap: Record<string, React.ComponentType<any>> = {
+  dashboard: Layout,
+  documents: FileText,
+  templates: FileCheck,
+  bug: Bug,
+  compliance: ClipboardCheck,
+  assets: HardDrive,
+  threat: Globe,
+  security: MonitorSmartphone,
+  redteam: Sword,
+  knowledge: Book,
+  learning: GraduationCap,
+  clients: ExternalLink,
+  team: Users,
+  settings: Settings,
+  ai: Sparkles
+};
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -246,7 +266,10 @@ const Sidebar: React.FC = () => {
       
       // Show if the user's role is in the item's allowed roles
       return item.roles.includes(role as UserRole);
-    });
+    }).map(item => ({
+      ...item,
+      iconComponent: iconMap[item.icon] || FileText // Use FileText as fallback
+    }));
     
     // Only include sections that have visible items
     return {
@@ -294,7 +317,7 @@ const Sidebar: React.FC = () => {
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton asChild isActive={isActive(item.path)}>
                     <Link to={item.path}>
-                      <item.icon className="h-4 w-4" />
+                      <item.iconComponent className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -319,7 +342,7 @@ const Sidebar: React.FC = () => {
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton asChild isActive={isActive(item.path)}>
                       <Link to={item.path}>
-                        <item.icon className="h-4 w-4" />
+                        <item.iconComponent className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -345,7 +368,7 @@ const Sidebar: React.FC = () => {
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton asChild isActive={isActive(item.path)}>
                       <Link to={item.path}>
-                        <item.icon className="h-4 w-4" />
+                        <item.iconComponent className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -371,7 +394,7 @@ const Sidebar: React.FC = () => {
                   <SidebarMenuItem key={page.path}>
                     <SidebarMenuButton asChild isActive={isActive(page.path)}>
                       <Link to={page.path}>
-                        <page.icon className="h-4 w-4" />
+                        <page.iconComponent className="h-4 w-4" />
                         <span>{page.name}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -424,7 +447,7 @@ const Sidebar: React.FC = () => {
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive(item.path)}>
                     <Link to={item.path}>
-                      <item.icon className="h-4 w-4" />
+                      <item.iconComponent className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
