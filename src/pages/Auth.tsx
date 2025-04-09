@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth, UserRole, SubscriptionPlan, planRoles } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserRole, SubscriptionPlan } from '@/types/auth-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,13 +27,21 @@ export interface PlanInfo {
   features: string[];
 }
 
+// Define allowed roles for each plan
+const planRoleMap = {
+  'free': ['individual'] as UserRole[],
+  'pro': ['individual', 'team_member'] as UserRole[],
+  'team': ['individual', 'team_member', 'team_manager'] as UserRole[],
+  'enterprise': ['individual', 'team_member', 'team_manager', 'administrator'] as UserRole[]
+};
+
 const plans: PlanInfo[] = [
   {
     id: 'free',
     name: 'Free',
     description: 'Basic features for personal use',
     price: 'Free',
-    allowedRoles: planRoles.free,
+    allowedRoles: planRoleMap.free,
     tag: 'Basic',
     features: [
       'Basic document encryption',
@@ -45,7 +55,7 @@ const plans: PlanInfo[] = [
     name: 'Pro',
     description: 'Advanced features for professionals',
     price: '$19/month',
-    allowedRoles: planRoles.pro,
+    allowedRoles: planRoleMap.pro,
     recommended: true,
     tag: 'Popular',
     features: [
@@ -61,7 +71,7 @@ const plans: PlanInfo[] = [
     name: 'Team',
     description: 'Essential tools for small teams',
     price: '$49/month',
-    allowedRoles: planRoles.team,
+    allowedRoles: planRoleMap.team,
     tag: 'Team',
     features: [
       'Everything in Pro',
@@ -76,7 +86,7 @@ const plans: PlanInfo[] = [
     name: 'Enterprise',
     description: 'Enhanced security for organizations',
     price: '$99/month',
-    allowedRoles: planRoles.enterprise,
+    allowedRoles: planRoleMap.enterprise,
     tag: 'Enterprise',
     features: [
       'Everything in Team',
@@ -137,7 +147,7 @@ const Auth = () => {
       return;
     }
     
-    if (!email || !password || !firstName || !lastName || !role || !plan) {
+    if (!email || !password || !firstName || !lastName || !role) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -163,7 +173,7 @@ const Auth = () => {
         firstName,
         lastName,
         role,
-        plan,
+        subscriptionTier: plan as any, 
       });
       navigate("/dashboard");
     } catch (error: any) {

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, Lock, ArrowLeft, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/types/auth-types';
+import { UserRole, SubscriptionPlan } from '@/types/auth-types';
 
 const Unauthorized: React.FC = () => {
   const location = useLocation();
-  const { role, subscriptionPlan } = useAuth();
+  const { role, subscriptionTier } = useAuth();
   
   // Extract required role from URL params
   const searchParams = new URLSearchParams(location.search);
@@ -44,6 +45,9 @@ const Unauthorized: React.FC = () => {
       case 'pro': return 'Pro';
       case 'team': return 'Team';
       case 'enterprise': return 'Enterprise';
+      case 'individual': return 'Individual';
+      case 'professional': return 'Professional';
+      case 'smb': return 'SMB';
       default: return plan;
     }
   };
@@ -79,7 +83,7 @@ const Unauthorized: React.FC = () => {
             <div>
               <p className="mb-1">Your current role: <span className="font-medium">{currentRoleName}</span></p>
               <p className="text-sm text-muted-foreground mb-4">
-                Your current subscription: {getSubscriptionName(subscriptionPlan || 'free')}
+                Your current subscription: {getSubscriptionName(subscriptionTier || 'free')}
               </p>
               
               <div className="flex items-center justify-center space-x-1">

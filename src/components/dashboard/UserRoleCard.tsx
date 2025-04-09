@@ -4,7 +4,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Users, Shield, ShieldAlert, Compass } from 'lucide-react';
-import { UserRole } from '@/contexts/AuthContext';
+import { UserRole } from '@/types/auth-types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserRoleCardProps {
   role: UserRole | null;

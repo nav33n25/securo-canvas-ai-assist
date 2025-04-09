@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/contexts/AuthContext';
+import { UserRole } from '@/types/auth-types';
 import { motion } from 'framer-motion';
 import { Shield, AlertTriangle } from 'lucide-react';
 

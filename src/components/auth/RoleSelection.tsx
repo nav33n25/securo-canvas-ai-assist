@@ -1,9 +1,11 @@
+
 import React from 'react';
-import { UserRole, useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, Users, PersonStanding, UserCog, LucideIcon } from 'lucide-react';
+import { Shield, Users, PersonStanding, UserCog } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/types/auth-types';
 
 interface RoleCardProps {
   title: string;
@@ -179,4 +181,4 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({
   );
 };
 
-export default RoleSelection; 
+export default RoleSelection;
