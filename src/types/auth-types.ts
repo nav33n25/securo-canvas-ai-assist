@@ -5,18 +5,19 @@ import {
   legacyToNewRoleMap,
   rolePermissions
 } from '@/types/common';
-import { 
+import type { 
   BasicUserRole, 
-  DetailedUserRole, 
-  SubscriptionTier,
+  SubscriptionTier as UsohSubscriptionTier,
+  DetailedUserRole as UsohDetailedUserRole,
   CombinedUserRole
 } from '@/types/usoh';
 
 // Export the combined user role type
 export type UserRole = CombinedUserRole;
 
-// Export SubscriptionTier type
-export { SubscriptionTier, DetailedUserRole };
+// Export SubscriptionTier type directly instead of re-exporting
+export type SubscriptionTier = UsohSubscriptionTier;
+export type DetailedUserRole = UsohDetailedUserRole;
 
 // Define the subscription plan type (for backward compatibility)
 export type SubscriptionPlan = 'free' | 'pro' | 'team' | 'enterprise';

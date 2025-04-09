@@ -1,6 +1,6 @@
 
-import { UserRole, SubscriptionTier } from '@/types/auth-types';
-import type { DetailedUserRole } from '@/types/usoh';
+import { UserRole } from '@/types/auth-types';
+import type { SubscriptionTier, DetailedUserRole } from '@/types/auth-types';
 
 // Define subscription tier hierarchy
 export const subscriptionTierHierarchy: Record<SubscriptionTier, number> = {

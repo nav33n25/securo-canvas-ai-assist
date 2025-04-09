@@ -1,5 +1,6 @@
 
 // Compatibility layer for Next.js imports
+import React from 'react';
 
 // Next Router compatibility
 export const useRouter = () => {
