@@ -55,7 +55,8 @@ export async function getDocument(id: string) {
   if (!data.content || !Array.isArray(data.content) || data.content.length === 0) {
     data.content = [{ type: 'paragraph', children: [{ text: '' }] }];
   }
-
+  
+  console.log('Retrieved document:', data);
   return data as Document;
 }
 
@@ -74,7 +75,8 @@ export async function createDocument(document: Omit<Partial<Document>, 'title'> 
   if (error) {
     throw new Error(error.message);
   }
-
+  
+  console.log('Created document:', data);
   return data as Document;
 }
 
@@ -85,6 +87,8 @@ export async function updateDocument(id: string, document: Partial<Document>) {
       document.content = [{ type: 'paragraph', children: [{ text: '' }] }];
     }
   }
+  
+  console.log('Updating document with content:', document.content);
 
   // Get current user to ensure proper RLS policy compliance
   const { data: { session } } = await supabase.auth.getSession();
@@ -109,7 +113,7 @@ export async function updateDocument(id: string, document: Partial<Document>) {
         change_summary: 'Document updated'
       });
     
-    // Now update the document
+    // Now update the document with stringified content to ensure proper JSON storage
     const { data, error } = await supabase
       .from('documents')
       .update({
@@ -122,9 +126,11 @@ export async function updateDocument(id: string, document: Partial<Document>) {
       .single();
 
     if (error) {
+      console.error('Error updating document:', error);
       throw new Error(error.message);
     }
 
+    console.log('Document updated successfully:', data);
     return data as Document;
   } catch (error: any) {
     console.error("Error updating document:", error);

@@ -7,7 +7,7 @@ import Toolbar from './Toolbar';
 import { renderElement, renderLeaf } from './RenderElements';
 import { Card, CardContent } from '@/components/ui/card';
 import { withSecurityBlocks } from './withSecurityBlocks';
-import { Shield } from 'lucide-react';
+import { Shield, Save, Eye, Clock, AlertTriangle } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
 import { toast } from '@/components/ui/use-toast';
 import { CustomElement } from '@/types/slate';
@@ -46,6 +46,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
   
   const [value, setValue] = useState<Descendant[]>(defaultValue);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [securityScore, setSecurityScore] = useState<number>(0);
   
   const editor = useMemo(() => {
     return withSecurityBlocks(withHistory(withReact(createEditor())));
@@ -57,6 +59,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       // Additional validation to ensure content conforms to expected types
       try {
         setValue(initialValue);
+        calculateSecurityScore(initialValue);
       } catch (error) {
         console.error('Error setting editor value:', error);
         toast({
@@ -68,6 +71,30 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
     }
   }, [initialValue]);
 
+  // Calculate a basic security score based on document content
+  const calculateSecurityScore = useCallback((content: Descendant[]) => {
+    if (!Array.isArray(content)) return 0;
+    
+    let score = 0;
+    const totalBlocks = content.length;
+    let securityBlocks = 0;
+    
+    // Count security-specific blocks
+    content.forEach(node => {
+      const type = (node as CustomElement).type;
+      if (type === 'security-note' || type === 'vulnerability' || 
+          type === 'compliance' || type === 'warning') {
+        securityBlocks++;
+        score += 10;
+      }
+    });
+    
+    // Add points for document length/complexity
+    score += Math.min(totalBlocks * 2, 30);
+    
+    setSecurityScore(Math.min(score, 100));
+  }, []);
+
   const toggleAIAssistant = useCallback(() => {
     setShowAIAssistant(prev => !prev);
   }, []);
@@ -77,11 +104,24 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
     if (Array.isArray(newValue) && newValue.length > 0) {
       setValue(newValue);
       onChange(newValue);
+      calculateSecurityScore(newValue);
     } else {
       console.error('Invalid editor value:', newValue);
       // Prevent saving invalid content that could break the editor
     }
-  }, [onChange]);
+  }, [onChange, calculateSecurityScore]);
+
+  const handleSave = useCallback(() => {
+    if (onSave) {
+      console.log('Saving document with content:', value);
+      onSave();
+      setLastSaved(new Date());
+      toast({
+        title: "Document saved",
+        description: "Your security document has been saved successfully.",
+      });
+    }
+  }, [onSave, value]);
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -91,7 +131,19 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
           <h1 className="text-2xl font-semibold">{title}</h1>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {lastSaved && (
+            <div className="text-sm text-muted-foreground flex items-center">
+              <Clock className="h-4 w-4 mr-1" />
+              Last saved: {lastSaved.toLocaleTimeString()}
+            </div>
+          )}
+          
+          <div className="flex items-center gap-1 bg-slate-800 px-3 py-1 rounded-full">
+            <AlertTriangle className={`h-4 w-4 ${securityScore > 70 ? 'text-green-500' : securityScore > 40 ? 'text-yellow-500' : 'text-red-500'}`} />
+            <span className="text-sm">Security Score: {securityScore}</span>
+          </div>
+          
           <Button 
             onClick={toggleAIAssistant}
             variant={showAIAssistant ? "default" : "outline"}
@@ -100,11 +152,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
             AI Assistant
           </Button>
           
-          {onSave && (
-            <Button onClick={onSave} className="bg-blue-500 hover:bg-blue-600">
-              Save
-            </Button>
-          )}
+          <Button onClick={handleSave} className="bg-blue-500 hover:bg-blue-600 flex items-center gap-2">
+            <Save className="h-4 w-4" />
+            Save
+          </Button>
         </div>
       </div>
       

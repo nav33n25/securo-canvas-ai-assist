@@ -10,7 +10,7 @@ import DocumentEditor from '@/components/editor/DocumentEditor';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Descendant } from 'slate';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 
 const DocumentPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,18 +31,22 @@ const DocumentPage = () => {
 
   // Update document mutation
   const { mutate: saveDocument, isPending: isSaving } = useMutation({
-    mutationFn: () => updateDocument(id!, {
-      title: documentTitle,
-      content: editorContent,
-    }),
-    onSuccess: () => {
+    mutationFn: () => {
+      console.log('Saving document with content:', editorContent);
+      return updateDocument(id!, {
+        title: documentTitle,
+        content: editorContent,
+      });
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['document', id] });
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       toast({
         title: "Document saved",
-        description: "Your changes have been saved successfully.",
+        description: "Your security document has been saved successfully.",
       });
       setHasChanges(false);
+      console.log('Document saved successfully:', data);
     },
     onError: (error: any) => {
       console.error("Save error:", error);
@@ -57,13 +61,16 @@ const DocumentPage = () => {
   // Set initial document data
   useEffect(() => {
     if (document) {
+      console.log('Document loaded:', document);
       setDocumentTitle(document.title);
       
       // Ensure document content is valid
       if (Array.isArray(document.content) && document.content.length > 0) {
+        console.log('Setting editor content:', document.content);
         setEditorContent(document.content);
       } else {
         // Set default content if the document content is invalid
+        console.warn('Invalid document content, setting default');
         setEditorContent([{ type: 'paragraph', children: [{ text: '' }] }]);
       }
       setHasChanges(false);
@@ -73,6 +80,7 @@ const DocumentPage = () => {
   // Handle content changes
   const handleContentChange = useCallback((newContent: Descendant[]) => {
     if (Array.isArray(newContent) && newContent.length > 0) {
+      console.log('Content changed');
       setEditorContent(newContent);
       setHasChanges(true);
     }
@@ -99,6 +107,7 @@ const DocumentPage = () => {
       return;
     }
 
+    console.log('Saving document, content length:', editorContent.length);
     saveDocument();
   }, [user, saveDocument, editorContent]);
   
@@ -107,6 +116,19 @@ const DocumentPage = () => {
     setDocumentTitle(e.target.value);
     setHasChanges(true);
   };
+
+  // Prompt before leaving if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        e.preventDefault();
+        return e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasChanges]);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -139,15 +161,32 @@ const DocumentPage = () => {
   return (
     <AppLayout>
       <div className="container mx-auto py-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate('/documents')}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/documents')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+          </div>
+          
+          {hasChanges && (
+            <div className="flex items-center">
+              <span className="text-amber-500 text-sm mr-2">Unsaved changes</span>
+              <Button 
+                onClick={handleSave} 
+                size="sm"
+                disabled={isSaving}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                <Save className="h-3 w-3 mr-1" />
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
         </div>
         
         {isLoading ? (
