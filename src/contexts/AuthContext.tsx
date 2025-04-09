@@ -4,22 +4,19 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { 
-  UserRole, 
   LegacyUserRole, 
-  SubscriptionTier, 
   legacyToNewRoleMap,
   rolePermissions
 } from '@/types/common';
-import { BasicUserRole, DetailedUserRole } from '@/types/usoh';
-
-// Replace the existing UserRole type with the enhanced version
-export type UserRole = BasicUserRole | DetailedUserRole;
-
-// Export the SubscriptionTier type
-export type { SubscriptionTier };
+import { 
+  BasicUserRole, 
+  DetailedUserRole, 
+  SubscriptionTier,
+  CombinedUserRole
+} from '@/types/usoh';
 
 // Update the planRoles to include the detailed roles
-export const planRoles: Record<SubscriptionTier, UserRole[]> = {
+export const planRoles: Record<SubscriptionTier, CombinedUserRole[]> = {
   'individual': ['individual', 'individual_basic'],
   'professional': ['individual', 'individual_professional'],
   'smb': [
@@ -88,7 +85,7 @@ interface UserProfile {
   email?: string;
   avatar_url?: string | null;
   job_title?: string | null;
-  role?: UserRole;
+  role?: CombinedUserRole;
   subscription_tier?: SubscriptionTier;
   team_id?: string;
   expertise_areas?: string[];
@@ -105,7 +102,7 @@ type AuthContextType = {
   loading: boolean;
   isAuthenticated: boolean;
   redirectTo: string | null;
-  role: UserRole | null;
+  role: CombinedUserRole | null;
   subscriptionTier: SubscriptionTier | null;
   team: string | null;
   hasPermission: (requiredPermissions: string[]) => boolean;
@@ -116,12 +113,12 @@ type AuthContextType = {
     password: string;
     firstName: string;
     lastName: string;
-    role?: UserRole | LegacyUserRole;
+    role?: CombinedUserRole | LegacyUserRole;
     subscriptionTier?: SubscriptionTier;
   }) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
-  setUserRole: (role: UserRole) => Promise<void>;
+  setUserRole: (role: CombinedUserRole) => Promise<void>;
   setUserSubscriptionTier: (tier: SubscriptionTier) => Promise<void>;
   joinTeam: (teamId: string, role?: string) => Promise<void>;
   leaveTeam: (teamId: string) => Promise<void>;
@@ -140,7 +137,13 @@ const subscriptionTierHierarchy: Record<SubscriptionTier, number> = {
 };
 
 // Define role hierarchy based on categories
-const roleHierarchy: Record<UserRole, number> = {
+const roleHierarchy: Record<string, number> = {
+  // Basic roles
+  'individual': 5,
+  'team_member': 15,
+  'team_manager': 65,
+  'administrator': 95,
+  
   // Individual roles
   'individual_basic': 10,
   'individual_professional': 20,
@@ -166,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [role, setRole] = useState<UserRole | null>(null);
+  const [role, setRole] = useState<CombinedUserRole | null>(null);
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier | null>(null);
   const [team, setTeam] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -311,7 +314,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', userId);
       } else {
         // Set directly if already using new role format
-        setRole(profileData.role as UserRole);
+        setRole(profileData.role as CombinedUserRole);
       }
     } else {
       // Default to individual_basic if no role is set
@@ -389,7 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string;
     firstName: string;
     lastName: string;
-    role?: UserRole | LegacyUserRole;
+    role?: CombinedUserRole | LegacyUserRole;
     subscriptionTier?: SubscriptionTier;
   }) => {
     try {
@@ -445,14 +448,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Set context state
-        setRole(processedRole as UserRole);
+        setRole(processedRole as CombinedUserRole);
         setSubscriptionTier(subscriptionTier);
         setProfile({
           id: data.user.id,
           first_name: firstName,
           last_name: lastName,
           email: email,
-          role: processedRole as UserRole,
+          role: processedRole as CombinedUserRole,
           subscription_tier: subscriptionTier,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -565,7 +568,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (Object.keys(legacyToNewRoleMap).includes(data.role as string)) {
           processedRole = legacyToNewRoleMap[data.role as LegacyUserRole];
         }
-        setRole(processedRole as UserRole);
+        setRole(processedRole as CombinedUserRole);
       }
       
       // Update subscription tier if it's being changed
@@ -589,7 +592,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setUserRole = async (newRole: UserRole) => {
+  const setUserRole = async (newRole: CombinedUserRole) => {
     if (!user) {
       toast({
         variant: "destructive",
@@ -834,26 +837,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Add a method to get the detailed role
+  // Function to get the detailed role
   const getDetailedRole = (): DetailedUserRole | null => {
-    // If role is already a detailed role, return it
-    if (role && Object.values(DetailedUserRole).includes(role as any)) {
+    if (!role) return null;
+    
+    // If the role is already a detailed role, return it
+    if (role !== 'individual' && 
+        role !== 'team_member' && 
+        role !== 'team_manager' && 
+        role !== 'administrator') {
       return role as DetailedUserRole;
     }
     
-    // Map basic roles to the most appropriate detailed role
-    switch (role) {
-      case 'individual':
-        return subscriptionTier === 'professional' ? 'individual_professional' : 'individual_basic';
-      case 'team_member':
-        return 'team_analyst';
-      case 'team_manager':
-        return 'team_lead';
-      case 'administrator':
-        return 'platform_admin';
-      default:
-        return null;
+    // Otherwise map from basic role to detailed role based on subscription tier
+    if (role === 'individual') {
+      return subscriptionTier === 'professional' ? 'individual_professional' : 'individual_basic';
     }
+    
+    // Default fallbacks for other roles
+    return null;
   };
 
   return (
@@ -894,6 +896,3 @@ export const useAuth = () => {
   
   return context;
 };
-
-// Export types for use in other files
-export type { UserRole, SubscriptionTier };

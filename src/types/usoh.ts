@@ -15,6 +15,9 @@ export type DetailedUserRole =
   // Admin tier
   'platform_admin' | 'knowledge_admin';
 
+// Combined user role type
+export type CombinedUserRole = BasicUserRole | DetailedUserRole;
+
 // Subscription tier types
 export type SubscriptionTier = 'individual' | 'professional' | 'smb' | 'enterprise';
 
