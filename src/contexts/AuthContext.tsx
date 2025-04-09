@@ -7,15 +7,19 @@ import { toast } from '@/components/ui/use-toast';
 // Define user role types based on platform structure
 export type UserRole = 'individual' | 'team_member' | 'team_manager' | 'administrator';
 
+// Define subscription plan types
+export type SubscriptionPlan = 'free' | 'pro' | 'team' | 'enterprise';
+
 // Define a proper interface for the user profile
 interface UserProfile {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  email?: string; // Making email optional since it might come from user object
+  email?: string;
   avatar_url?: string | null;
   job_title?: string | null;
   role?: UserRole;
+  subscription_plan?: SubscriptionPlan;
   organization_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -27,11 +31,13 @@ type AuthContextType = {
   profile: UserProfile | null;
   loading: boolean;
   role: UserRole | null;
+  subscriptionPlan: SubscriptionPlan | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, firstName: string, lastName: string, role?: UserRole) => Promise<void>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, role?: UserRole, plan?: SubscriptionPlan) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   setUserRole: (role: UserRole) => Promise<void>;
+  setUserPlan: (plan: SubscriptionPlan) => Promise<void>;
   hasPermission: (requiredRoles: UserRole[]) => boolean;
 };
 
@@ -45,11 +51,20 @@ const roleHierarchy: Record<UserRole, number> = {
   'administrator': 4
 };
 
+// Define allowed roles for each subscription plan
+export const planRoles: Record<SubscriptionPlan, UserRole[]> = {
+  'free': ['individual'],
+  'pro': ['individual', 'team_member'],
+  'team': ['individual', 'team_member', 'team_manager'],
+  'enterprise': ['individual', 'team_member', 'team_manager', 'administrator']
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -66,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
           setRole(null);
+          setSubscriptionPlan(null);
         }
         
         if (event === 'SIGNED_OUT') {
@@ -132,6 +148,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .update({ role: 'individual' })
               .eq('id', userId);
           }
+          
+          // Set subscription plan from profile
+          if (profileWithEmail.subscription_plan) {
+            setSubscriptionPlan(profileWithEmail.subscription_plan as SubscriptionPlan);
+          } else {
+            // Default to free plan if no plan is set
+            setSubscriptionPlan('free');
+            // Update the profile with the default plan
+            await supabase
+              .from('profiles')
+              .update({ subscription_plan: 'free' })
+              .eq('id', userId);
+          }
         } else {
           setProfile(profileData as UserProfile);
           
@@ -147,16 +176,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .update({ role: 'individual' })
               .eq('id', userId);
           }
+          
+          // Set subscription plan from profile
+          if (profileData.subscription_plan) {
+            setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
+          } else {
+            // Default to free plan if no plan is set
+            setSubscriptionPlan('free');
+            // Update the profile with the default plan
+            await supabase
+              .from('profiles')
+              .update({ subscription_plan: 'free' })
+              .eq('id', userId);
+          }
         }
       } catch (userError) {
         console.error('Error getting user email:', userError);
         setProfile(profileData as UserProfile);
         
-        // Still set the role
+        // Still set the role and plan
         if (profileData.role) {
           setRole(profileData.role as UserRole);
         } else {
           setRole('individual');
+        }
+        
+        if (profileData.subscription_plan) {
+          setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
+        } else {
+          setSubscriptionPlan('free');
         }
       } finally {
         setLoading(false);
@@ -182,7 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           description: error.message,
         });
       } else {
-        navigate('/');
+        navigate('/dashboard');
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
@@ -197,8 +245,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string, role: UserRole = 'individual') => {
+  const signUp = async (
+    email: string, 
+    password: string, 
+    firstName: string, 
+    lastName: string, 
+    role: UserRole = 'individual',
+    plan: SubscriptionPlan = 'free'
+  ) => {
     try {
+      // Validate that the role is allowed for the plan
+      if (!planRoles[plan].includes(role)) {
+        toast({
+          variant: "destructive",
+          title: "Invalid role selection",
+          description: `The selected role is not available for the ${plan} plan.`,
+        });
+        return;
+      }
+      
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -206,7 +271,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             first_name: firstName,
             last_name: lastName,
-            role: role
+            role: role,
+            subscription_plan: plan
           }
         }
       });
@@ -226,7 +292,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: data.user.id,
               first_name: firstName,
               last_name: lastName,
-              role: role
+              role: role,
+              subscription_plan: plan
             });
             
           if (profileError) {
@@ -263,6 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: "You have successfully signed out.",
       });
       setRole(null);
+      setSubscriptionPlan(null);
       navigate('/auth');
     }
   };
@@ -285,7 +353,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      const updatedProfile = prev => {
+      setProfile(prev => {
         if (!prev) return null;
         const newProfile = { ...prev, ...data };
         
@@ -294,10 +362,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRole(data.role);
         }
         
+        // Update subscription plan state if plan was changed
+        if (data.subscription_plan && data.subscription_plan !== subscriptionPlan) {
+          setSubscriptionPlan(data.subscription_plan);
+        }
+        
         return newProfile;
-      };
-      
-      setProfile(updatedProfile);
+      });
       
       toast({
         title: "Profile updated",
@@ -314,7 +385,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   
   const setUserRole = async (newRole: UserRole) => {
-    if (!user) return;
+    if (!user || !subscriptionPlan) return;
+    
+    // Validate that the role is allowed for the current plan
+    if (!planRoles[subscriptionPlan].includes(newRole)) {
+      toast({
+        variant: "destructive",
+        title: "Role change failed",
+        description: `The ${newRole.replace('_', ' ')} role is not available on your current plan.`,
+      });
+      return;
+    }
     
     try {
       // Update the role in the database
@@ -332,6 +413,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       navigate('/dashboard');
     } catch (error) {
       console.error('Error setting user role:', error);
+    }
+  };
+  
+  const setUserPlan = async (newPlan: SubscriptionPlan) => {
+    if (!user) return;
+    
+    try {
+      // If current role is not allowed in the new plan, downgrade to the highest available role
+      let updatedRole = role;
+      if (role && !planRoles[newPlan].includes(role)) {
+        updatedRole = planRoles[newPlan][planRoles[newPlan].length - 1];
+      }
+      
+      // Update the plan in the database
+      await updateProfile({ 
+        subscription_plan: newPlan,
+        role: updatedRole
+      });
+      
+      // Set the plan and potentially new role in state
+      setSubscriptionPlan(newPlan);
+      if (updatedRole !== role) {
+        setRole(updatedRole);
+      }
+      
+      toast({
+        title: "Subscription Updated",
+        description: `Your subscription has been updated to the ${newPlan.charAt(0).toUpperCase() + newPlan.slice(1)} plan.`,
+      });
+      
+      // Redirect to the dashboard to refresh the view
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error setting user plan:', error);
     }
   };
   
@@ -361,11 +476,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     loading,
     role,
+    subscriptionPlan,
     signIn,
     signUp,
     signOut,
     updateProfile,
     setUserRole,
+    setUserPlan,
     hasPermission
   };
 

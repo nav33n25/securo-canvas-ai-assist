@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { useAuth, UserRole, SubscriptionPlan } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,6 +9,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -19,12 +23,48 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Shield, LogOut, User, Settings, ChevronDown, Users2, PersonStanding, UserCog } from 'lucide-react';
+import { 
+  Shield, 
+  LogOut, 
+  User, 
+  Settings, 
+  Users2, 
+  PersonStanding, 
+  UserCog,
+  CreditCard,
+  Star,
+  Crown
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RoleSelection from '../auth/RoleSelection';
+import { Badge } from '../ui/badge';
+
+// Define plan display information
+const planInfo: Record<SubscriptionPlan, { label: string, color: string, icon: React.ReactNode }> = {
+  'free': { 
+    label: 'Free Plan', 
+    color: 'bg-gray-100 text-gray-800 hover:bg-gray-200', 
+    icon: <Shield className="h-4 w-4 mr-2" />
+  },
+  'pro': { 
+    label: 'Pro Plan', 
+    color: 'bg-blue-100 text-blue-800 hover:bg-blue-200', 
+    icon: <Star className="h-4 w-4 mr-2" /> 
+  },
+  'team': { 
+    label: 'Team Plan', 
+    color: 'bg-purple-100 text-purple-800 hover:bg-purple-200', 
+    icon: <Users2 className="h-4 w-4 mr-2" /> 
+  },
+  'enterprise': { 
+    label: 'Enterprise Plan', 
+    color: 'bg-amber-100 text-amber-800 hover:bg-amber-200', 
+    icon: <Crown className="h-4 w-4 mr-2" /> 
+  }
+};
 
 const UserMenu = () => {
-  const { user, profile, signOut, role, setUserRole } = useAuth();
+  const { user, profile, signOut, role, setUserRole, subscriptionPlan, setUserPlan } = useAuth();
   const [roleDialogOpen, setRoleDialogOpen] = React.useState(false);
   const navigate = useNavigate();
 
@@ -67,15 +107,31 @@ const UserMenu = () => {
         return <User className="h-4 w-4 mr-2" />;
     }
   };
+  
+  // Handle plan upgrade
+  const handlePlanChange = async (plan: SubscriptionPlan) => {
+    if (subscriptionPlan === plan) return;
+    await setUserPlan(plan);
+  };
 
   return (
     <div className="flex items-center gap-2">
       <div className="hidden md:block text-right mr-2">
         <p className="text-sm font-medium">{getDisplayName()}</p>
-        <p className="text-xs text-muted-foreground flex items-center justify-end">
+        <div className="text-xs text-muted-foreground flex items-center justify-end gap-2">
           {getRoleIcon()}
           {formatRole(role)}
-        </p>
+          
+          {/* Show subscription badge */}
+          {subscriptionPlan && (
+            <Badge variant="outline" className={`ml-1 text-xs px-1 ${
+              planInfo[subscriptionPlan]?.color || ''
+            }`}>
+              {planInfo[subscriptionPlan]?.icon}
+              <span className="text-xs">{subscriptionPlan}</span>
+            </Badge>
+          )}
+        </div>
       </div>
       
       <DropdownMenu>
@@ -92,6 +148,14 @@ const UserMenu = () => {
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{getDisplayName()}</p>
               <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+              {subscriptionPlan && (
+                <Badge variant="outline" className={`w-fit mt-1 ${
+                  planInfo[subscriptionPlan]?.color || ''
+                }`}>
+                  {planInfo[subscriptionPlan]?.icon}
+                  {planInfo[subscriptionPlan]?.label}
+                </Badge>
+              )}
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -100,6 +164,46 @@ const UserMenu = () => {
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
+            
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <CreditCard className="mr-2 h-4 w-4" />
+                <span>Subscription Plan</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem 
+                    onClick={() => handlePlanChange('free')}
+                    disabled={subscriptionPlan === 'free'}
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    <span>Free Plan</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handlePlanChange('pro')}
+                    disabled={subscriptionPlan === 'pro'}
+                  >
+                    <Star className="mr-2 h-4 w-4" />
+                    <span>Professional ($19/month)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handlePlanChange('team')}
+                    disabled={subscriptionPlan === 'team'}
+                  >
+                    <Users2 className="mr-2 h-4 w-4" />
+                    <span>Team ($49/month)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handlePlanChange('enterprise')}
+                    disabled={subscriptionPlan === 'enterprise'}
+                  >
+                    <Crown className="mr-2 h-4 w-4" />
+                    <span>Enterprise ($99/month)</span>
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            
             <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
               <DialogTrigger asChild>
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

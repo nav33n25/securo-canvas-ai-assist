@@ -1,14 +1,56 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, UserRole, SubscriptionPlan, planRoles } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield } from 'lucide-react';
+import { Shield, Check, CreditCard } from 'lucide-react';
 import RoleSelection from '@/components/auth/RoleSelection';
-import { UserRole } from '@/contexts/AuthContext';
+import { toast } from '@/components/ui/use-toast';
+
+// Define subscription plans and their allowed roles
+export interface PlanInfo {
+  id: SubscriptionPlan;
+  name: string;
+  description: string;
+  price: string;
+  allowedRoles: UserRole[];
+  recommended?: boolean;
+}
+
+const subscriptionPlans: PlanInfo[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    description: 'For students and security enthusiasts',
+    price: 'Free',
+    allowedRoles: planRoles.free,
+  },
+  {
+    id: 'pro',
+    name: 'Professional',
+    description: 'For security professionals and consultants',
+    price: '$19/month',
+    allowedRoles: planRoles.pro,
+    recommended: true,
+  },
+  {
+    id: 'team',
+    name: 'Team',
+    description: 'For security teams and departments',
+    price: '$49/month',
+    allowedRoles: planRoles.team,
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    description: 'Full platform access for organizations',
+    price: '$99/month',
+    allowedRoles: planRoles.enterprise,
+  }
+];
 
 const Auth = () => {
   const { user, loading, signIn, signUp } = useAuth();
@@ -22,7 +64,9 @@ const Auth = () => {
   const [lastName, setLastName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [showPlanSelection, setShowPlanSelection] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('individual');
+  const [selectedPlan, setSelectedPlan] = useState<PlanInfo | null>(null);
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -36,17 +80,41 @@ const Auth = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    if (!showRoleSelection) {
-      // First step: Show role selection
+    if (!showPlanSelection && !showRoleSelection) {
+      // First step: Show plan selection
+      setShowPlanSelection(true);
+      setIsSubmitting(false);
+    } else if (showPlanSelection && !showRoleSelection) {
+      // Second step: Show role selection
+      setShowPlanSelection(false);
       setShowRoleSelection(true);
       setIsSubmitting(false);
     } else {
-      // Second step: Complete sign up with selected role
-      await signUp(email, password, firstName, lastName, selectedRole);
+      if (!selectedPlan) {
+        toast({
+          variant: "destructive",
+          title: "No plan selected",
+          description: "Please select a subscription plan.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Final step: Complete sign up with selected role and plan
+      await signUp(email, password, firstName, lastName, selectedRole, selectedPlan.id);
       setIsSubmitting(false);
-      // Reset role selection view
+      // Reset selection views
       setShowRoleSelection(false);
+      setShowPlanSelection(false);
     }
+  };
+  
+  const handlePlanSelected = (plan: PlanInfo) => {
+    setSelectedPlan(plan);
+    
+    // Default to the highest role allowed by the plan
+    const highestRole = plan.allowedRoles[plan.allowedRoles.length - 1];
+    setSelectedRole(highestRole);
   };
   
   const handleRoleSelected = (role: UserRole) => {
@@ -56,11 +124,77 @@ const Auth = () => {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setShowRoleSelection(false);
+    setShowPlanSelection(false);
+  };
+
+  const handleBackFromRoleSelection = () => {
+    setShowRoleSelection(false);
+    setShowPlanSelection(true);
+  };
+  
+  const handleBackFromPlanSelection = () => {
+    setShowPlanSelection(false);
   };
 
   if (!loading && user) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  // Render the plan selection step
+  const renderPlanSelection = () => (
+    <div className="px-6 py-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {subscriptionPlans.map((plan) => (
+          <Card 
+            key={plan.id}
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedPlan?.id === plan.id ? 'ring-2 ring-secure bg-secure/5' : ''
+            } ${plan.recommended ? 'border-secure' : ''}`}
+            onClick={() => handlePlanSelected(plan)}
+          >
+            <CardContent className="p-4">
+              {plan.recommended && (
+                <div className="bg-secure text-white text-xs px-2 py-0.5 rounded absolute -mt-6 right-2">
+                  Recommended
+                </div>
+              )}
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-medium text-lg">{plan.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-2">{plan.description}</p>
+                </div>
+                {selectedPlan?.id === plan.id && (
+                  <Check className="h-5 w-5 text-secure" />
+                )}
+              </div>
+              <div className="text-xl font-bold">{plan.price}</div>
+              <div className="mt-3 text-xs text-muted-foreground">
+                Available roles: {plan.allowedRoles.map(role => 
+                  role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+                ).join(', ')}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="flex justify-between mt-6">
+        <Button
+          variant="outline"
+          onClick={handleBackFromPlanSelection}
+        >
+          Back
+        </Button>
+        <Button 
+          onClick={handleSignUp}
+          className="bg-secure hover:bg-secure-darker"
+          disabled={!selectedPlan || isSubmitting}
+        >
+          <CreditCard className="h-4 w-4 mr-2" />
+          {isSubmitting ? 'Processing...' : 'Continue'}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -74,11 +208,17 @@ const Auth = () => {
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl">
-              {showRoleSelection ? "Select Your Role" : "Authentication"}
+              {showRoleSelection 
+                ? "Select Your Role" 
+                : showPlanSelection 
+                ? "Choose Your Plan" 
+                : "Authentication"}
             </CardTitle>
             <CardDescription>
               {showRoleSelection 
                 ? "Choose the role that best describes your security work" 
+                : showPlanSelection
+                ? "Select a plan that matches your security needs"
                 : "Sign in to your account or create a new one"}
             </CardDescription>
           </CardHeader>
@@ -89,11 +229,12 @@ const Auth = () => {
                   initialRole={selectedRole}
                   onRoleSelect={handleRoleSelected}
                   showContinueButton={false}
+                  allowedRoles={selectedPlan?.allowedRoles || []}
                 />
                 <div className="flex justify-between mt-6">
                   <Button
                     variant="outline"
-                    onClick={() => setShowRoleSelection(false)}
+                    onClick={handleBackFromRoleSelection}
                   >
                     Back
                   </Button>
@@ -103,10 +244,12 @@ const Auth = () => {
                     className="bg-secure hover:bg-secure-darker"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Creating account...' : 'Continue'}
+                    {isSubmitting ? 'Creating account...' : 'Complete Registration'}
                   </Button>
                 </div>
               </div>
+            ) : showPlanSelection ? (
+              renderPlanSelection()
             ) : (
               <Tabs 
                 value={activeTab} 
@@ -199,7 +342,7 @@ const Auth = () => {
                       className="w-full bg-secure hover:bg-secure-darker"
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? 'Processing...' : 'Continue to Role Selection'}
+                      {isSubmitting ? 'Processing...' : 'Continue to Plan Selection'}
                     </Button>
                   </form>
                 </TabsContent>

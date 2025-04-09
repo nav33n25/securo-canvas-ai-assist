@@ -12,6 +12,7 @@ interface RoleCardProps {
   role: UserRole;
   onSelect: (role: UserRole) => void;
   isSelected: boolean;
+  disabled?: boolean;
 }
 
 const RoleCard: React.FC<RoleCardProps> = ({ 
@@ -20,13 +21,18 @@ const RoleCard: React.FC<RoleCardProps> = ({
   icon, 
   role, 
   onSelect,
-  isSelected
+  isSelected,
+  disabled = false
 }) => (
   <Card 
-    className={`cursor-pointer transition-all hover:shadow-md ${
+    className={`transition-all ${
+      disabled 
+        ? 'opacity-50 cursor-not-allowed' 
+        : 'cursor-pointer hover:shadow-md'
+    } ${
       isSelected ? 'ring-2 ring-secure bg-secure/5' : ''
     }`}
-    onClick={() => onSelect(role)}
+    onClick={() => !disabled && onSelect(role)}
   >
     <CardContent className="p-4 flex flex-col items-center text-center">
       <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
@@ -36,6 +42,9 @@ const RoleCard: React.FC<RoleCardProps> = ({
       </div>
       <h3 className="font-medium text-lg mb-1">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
+      {disabled && (
+        <p className="text-xs text-red-500 mt-2">Not available in your current plan</p>
+      )}
     </CardContent>
   </Card>
 );
@@ -44,12 +53,14 @@ interface RoleSelectionProps {
   initialRole?: UserRole | null;
   onRoleSelect?: (role: UserRole) => void;
   showContinueButton?: boolean;
+  allowedRoles?: UserRole[];
 }
 
 const RoleSelection: React.FC<RoleSelectionProps> = ({ 
   initialRole, 
   onRoleSelect, 
-  showContinueButton = true 
+  showContinueButton = true,
+  allowedRoles = ['individual', 'team_member', 'team_manager', 'administrator']
 }) => {
   const { setUserRole, role: currentRole } = useAuth();
   const [selectedRole, setSelectedRole] = React.useState<UserRole | null>(initialRole || currentRole);
@@ -102,27 +113,48 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({
     navigate('/dashboard');
   };
 
+  // Ensure the selected role is available in the current plan
+  React.useEffect(() => {
+    if (selectedRole && !allowedRoles.includes(selectedRole)) {
+      // If current selection is not allowed, default to the highest allowed role
+      const highestAllowedRole = [...allowedRoles].pop();
+      if (highestAllowedRole) {
+        setSelectedRole(highestAllowedRole);
+        if (onRoleSelect) {
+          onRoleSelect(highestAllowedRole);
+        }
+      }
+    }
+  }, [allowedRoles, selectedRole, onRoleSelect]);
+
   return (
     <div className="space-y-6">
-      <div className="text-center mb-4">
-        <h2 className="text-2xl font-bold mb-2">Select Your Role</h2>
-        <p className="text-muted-foreground">
-          Choose the role that best describes your security work
-        </p>
-      </div>
+      {!initialRole && (
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-bold mb-2">Select Your Role</h2>
+          <p className="text-muted-foreground">
+            Choose the role that best describes your security work
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {roles.map((roleOption) => (
-          <RoleCard
-            key={roleOption.role}
-            title={roleOption.title}
-            description={roleOption.description}
-            icon={roleOption.icon}
-            role={roleOption.role}
-            onSelect={handleRoleSelect}
-            isSelected={selectedRole === roleOption.role}
-          />
-        ))}
+        {roles.map((roleOption) => {
+          const isRoleAllowed = allowedRoles.includes(roleOption.role);
+          
+          return (
+            <RoleCard
+              key={roleOption.role}
+              title={roleOption.title}
+              description={roleOption.description}
+              icon={roleOption.icon}
+              role={roleOption.role}
+              onSelect={handleRoleSelect}
+              isSelected={selectedRole === roleOption.role}
+              disabled={!isRoleAllowed}
+            />
+          );
+        })}
       </div>
 
       {showContinueButton && (
