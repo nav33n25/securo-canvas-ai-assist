@@ -1097,4 +1097,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const getRoleCategory = (): 'individual' | 'team' | 'management' | 'administrative' => {
     if (!role) return 'individual';
     
-    if (role.startsWith('individual_')) {
+    if (role.startsWith('individual_'))
