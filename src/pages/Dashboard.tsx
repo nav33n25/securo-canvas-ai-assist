@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
@@ -148,15 +149,25 @@ const Dashboard: React.FC = () => {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     const loadRecentDocuments = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsLoadingDocuments(false);
+        return;
+      }
       
-      setIsLoadingDocuments(true);
-      const documents = await fetchRecentDocuments(user.id);
-      setRecentDocuments(documents);
-      setIsLoadingDocuments(false);
+      try {
+        setIsLoadingDocuments(true);
+        const documents = await fetchRecentDocuments(user.id);
+        setRecentDocuments(documents);
+      } catch (err) {
+        console.error('Error loading recent documents:', err);
+        setError('Failed to load recent documents');
+      } finally {
+        setIsLoadingDocuments(false);
+      }
     };
     
     loadRecentDocuments();
@@ -164,16 +175,43 @@ const Dashboard: React.FC = () => {
   
   useEffect(() => {
     const loadActivityFeed = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsLoadingActivities(false);
+        return;
+      }
       
-      setIsLoadingActivities(true);
-      const activities = await fetchActivityFeed(user.id);
-      setActivities(activities);
-      setIsLoadingActivities(false);
+      try {
+        setIsLoadingActivities(true);
+        const activities = await fetchActivityFeed(user.id);
+        setActivities(activities);
+      } catch (err) {
+        console.error('Error loading activity feed:', err);
+        setError('Failed to load activity feed');
+      } finally {
+        setIsLoadingActivities(false);
+      }
     };
     
     loadActivityFeed();
   }, [user]);
+  
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto px-4 py-6">
+          <div className="bg-red-50 border border-red-200 p-4 rounded-md">
+            <p className="text-red-700">Error: {error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
   
   return (
     <AppLayout>

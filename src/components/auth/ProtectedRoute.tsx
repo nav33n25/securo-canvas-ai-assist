@@ -1,5 +1,6 @@
 
-import { Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -11,7 +12,16 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requiredRoles = [] }: ProtectedRouteProps) => {
-  const { user, loading, role, hasPermission } = useAuth();
+  const { user, loading, role, hasPermission, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // If we know the user is not authenticated (and not still loading), redirect to auth
+    if (!loading && !isAuthenticated) {
+      console.log('Not authenticated, redirecting to /auth');
+      navigate('/auth');
+    }
+  }, [loading, isAuthenticated, navigate]);
 
   if (loading) {
     return (
@@ -37,7 +47,7 @@ const ProtectedRoute = ({ children, requiredRoles = [] }: ProtectedRouteProps) =
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
 

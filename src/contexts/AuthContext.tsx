@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
@@ -86,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, !!session);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -101,16 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
           setRole(null);
           setSubscriptionPlan(null);
-        }
-        
-        if (event === 'SIGNED_OUT') {
-          navigate('/auth');
+          
+          // Only redirect to auth if not already there
+          if (event === 'SIGNED_OUT' && window.location.pathname !== '/auth') {
+            navigate('/auth');
+          }
         }
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Got session:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -128,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (userId: string) => {
     try {
       setLoading(true);
+      console.log('Fetching profile for user:', userId);
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -144,6 +147,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
+      
+      console.log('Profile data fetched:', profileData);
       
       try {
         // Add email from the user object if available
@@ -242,9 +247,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('Signing in with email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
+        console.error('Sign in error:', error);
         toast({
           variant: "destructive",
           title: "Authentication failed",
@@ -254,6 +261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (data?.user) {
+        console.log('Signed in successfully:', data.user.id);
         // Explicitly fetch the user profile to ensure it's loaded
         await fetchProfile(data.user.id);
         

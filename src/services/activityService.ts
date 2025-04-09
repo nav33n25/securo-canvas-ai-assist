@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ActivityItem {
@@ -32,14 +33,12 @@ export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]>
       let firstName = '';
       let lastName = '';
       
-      // Fix for TS18047: Add proper null checking for item.profiles
-      if (item.profiles && 
-          typeof item.profiles === 'object' && 
-          item.profiles !== null) {
-        // Extract profile data with proper type assertion
-        const profileData = item.profiles as { first_name?: string; last_name?: string };
-        firstName = profileData.first_name || '';
-        lastName = profileData.last_name || '';
+      // First check if profiles exists and is not null
+      if (item.profiles && typeof item.profiles === 'object') {
+        // Then use optional chaining to safely access properties
+        const profileData = item.profiles as { first_name?: string; last_name?: string } | null;
+        firstName = profileData?.first_name || '';
+        lastName = profileData?.last_name || '';
       }
       
       return {
