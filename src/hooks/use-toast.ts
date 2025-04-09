@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -190,5 +191,5 @@ function useToast() {
 
 export { useToast, toast }
 
-// Re-export the use-toast from the UI component
-export { useToast } from '@/components/ui/use-toast';
+// Re-export from UI components - Remove this duplicate export
+// export { useToast } from '@/components/ui/use-toast';

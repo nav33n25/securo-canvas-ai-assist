@@ -9,7 +9,7 @@ import { withSecurityBlocks } from './withSecurityBlocks';
 import { Shield, Save, Clock } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
 import { toast } from '@/components/ui/use-toast';
-import { CustomElement, CustomText } from '@/types/slate';
+import { CustomElement, CustomText, HeadingOneElement, HeadingTwoElement, HeadingThreeElement, ParagraphElement, BulletedListElement, NumberedListElement, ListItemElement } from '@/types/slate';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -232,47 +232,47 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       title: 'Vulnerability Details',
       roles: ['individual', 'team_member', 'team_manager', 'administrator'],
       template: [
-        { type: 'heading', level: 2, children: [{ text: 'Vulnerability Details' }] },
-        { type: 'paragraph', children: [{ text: 'Description: ' }] },
-        { type: 'paragraph', children: [{ text: 'Severity: High/Medium/Low' }] },
-        { type: 'paragraph', children: [{ text: 'Affected Components: ' }] },
-        { type: 'paragraph', children: [{ text: 'Reproduction Steps: ' }] },
+        { type: 'heading-two' as const, children: [{ text: 'Vulnerability Details' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Description: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Severity: High/Medium/Low' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Affected Components: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Reproduction Steps: ' }] },
       ]
     },
     {
       title: 'Risk Assessment',
       roles: ['team_member', 'team_manager', 'administrator'],
       template: [
-        { type: 'heading', level: 2, children: [{ text: 'Risk Assessment' }] },
-        { type: 'paragraph', children: [{ text: 'Impact: ' }] },
-        { type: 'paragraph', children: [{ text: 'Likelihood: ' }] },
-        { type: 'paragraph', children: [{ text: 'Overall Risk: ' }] },
-        { type: 'paragraph', children: [{ text: 'Business Context: ' }] },
+        { type: 'heading-two' as const, children: [{ text: 'Risk Assessment' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Impact: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Likelihood: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Overall Risk: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Business Context: ' }] },
       ]
     },
     {
       title: 'Compliance Requirements',
       roles: ['team_manager', 'administrator'],
       template: [
-        { type: 'heading', level: 2, children: [{ text: 'Compliance Requirements' }] },
-        { type: 'paragraph', children: [{ text: 'Regulatory Standards: ' }] },
-        { type: 'paragraph', children: [{ text: 'Control Requirements: ' }] },
-        { type: 'paragraph', children: [{ text: 'Audit Evidence: ' }] },
+        { type: 'heading-two' as const, children: [{ text: 'Compliance Requirements' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Regulatory Standards: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Control Requirements: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Audit Evidence: ' }] },
       ]
     },
     {
       title: 'Executive Summary',
       roles: ['team_manager', 'administrator'],
       template: [
-        { type: 'heading', level: 2, children: [{ text: 'Executive Summary' }] },
-        { type: 'paragraph', children: [{ text: 'Key Findings: ' }] },
-        { type: 'paragraph', children: [{ text: 'Business Impact: ' }] },
-        { type: 'paragraph', children: [{ text: 'Recommended Actions: ' }] },
-        { type: 'paragraph', children: [{ text: 'Timeline: ' }] },
+        { type: 'heading-two' as const, children: [{ text: 'Executive Summary' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Key Findings: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Business Impact: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Recommended Actions: ' }] },
+        { type: 'paragraph' as const, children: [{ text: 'Timeline: ' }] },
       ]
     }
   ];
-  
+
   // Filter template options based on user role
   const availableTemplateOptions = securityTemplateOptions.filter(option => {
     if (!role) return false;

@@ -30,7 +30,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 
-// Define different dashboard widgets based on user roles
 interface DashboardWidget {
   id: string;
   title: string;
@@ -41,7 +40,6 @@ interface DashboardWidget {
   requiredRoles: UserRole[];
 }
 
-// Define document type for recent documents
 interface RecentDocument {
   id: string;
   title: string;
@@ -49,7 +47,6 @@ interface RecentDocument {
   status: string;
 }
 
-// Define activity type for activity feed
 interface ActivityItem {
   id: string;
   type: 'document_created' | 'document_updated' | 'comment_added' | 'role_changed' | 'joined';
@@ -179,18 +176,14 @@ const Dashboard: React.FC = () => {
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   
-  // Filter widgets based on user role
   const filteredWidgets = dashboardWidgets.filter(widget => {
     if (!role) return false;
     
-    // If user is administrator, show all widgets
     if (role === 'administrator') return true;
     
-    // Otherwise, check if the user's role is in the widget's required roles
     return widget.requiredRoles.includes(role);
   });
   
-  // Fetch recent documents
   useEffect(() => {
     const fetchRecentDocuments = async () => {
       if (!user) return;
@@ -217,7 +210,6 @@ const Dashboard: React.FC = () => {
     fetchRecentDocuments();
   }, [user]);
   
-  // Fetch activity feed
   useEffect(() => {
     const fetchActivityFeed = async () => {
       if (!user) return;
@@ -225,8 +217,6 @@ const Dashboard: React.FC = () => {
       try {
         setIsLoadingActivities(true);
         
-        // This is a simplified query - in a real app, you would have an activities table
-        // For now, we'll use document versions as a proxy for activity
         const { data, error } = await supabase
           .from('document_versions')
           .select(`
@@ -242,7 +232,6 @@ const Dashboard: React.FC = () => {
           
         if (error) throw error;
         
-        // Transform the data into activity items
         const transformedActivities = data?.map(item => ({
           id: item.id,
           type: 'document_updated',
@@ -265,7 +254,6 @@ const Dashboard: React.FC = () => {
     fetchActivityFeed();
   }, [user]);
   
-  // Determine greeting based on time of day
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -273,7 +261,6 @@ const Dashboard: React.FC = () => {
     return 'Good evening';
   };
   
-  // Get user's display name
   const getDisplayName = () => {
     if (profile?.first_name) {
       return profile.first_name;
@@ -282,7 +269,6 @@ const Dashboard: React.FC = () => {
     return 'there';
   };
   
-  // Get role-specific welcome message
   const getWelcomeMessage = () => {
     switch(role) {
       case 'individual':
@@ -311,9 +297,7 @@ const Dashboard: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main content - takes 2/3 of space on large screens */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Recent activity section */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -370,7 +354,6 @@ const Dashboard: React.FC = () => {
               </CardFooter>
             </Card>
             
-            {/* Recent Documents */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -431,9 +414,7 @@ const Dashboard: React.FC = () => {
             </Card>
           </div>
           
-          {/* Sidebar - takes 1/3 of space on large screens */}
           <div className="space-y-6">
-            {/* Quick access widgets */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Access</CardTitle>
@@ -464,7 +445,6 @@ const Dashboard: React.FC = () => {
               </CardFooter>
             </Card>
             
-            {/* Role-specific information */}
             {role && (
               <Card>
                 <CardHeader>
@@ -506,7 +486,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         
-        {/* All modules section */}
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">All Modules</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -532,7 +511,6 @@ const Dashboard: React.FC = () => {
               </Card>
             ))}
             
-            {/* Create New Document card - available to all users */}
             <Card className="overflow-hidden transition-all hover:shadow-md">
               <CardHeader className="p-4 pb-2">
                 <div className="flex justify-between items-start">
