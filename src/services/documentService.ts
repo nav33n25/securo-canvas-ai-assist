@@ -48,11 +48,13 @@ export async function getDocument(id: string) {
     .single();
 
   if (error) {
+    console.error('Error fetching document:', error);
     throw new Error(error.message);
   }
 
   // Ensure we have valid content structure
   if (!data.content || !Array.isArray(data.content) || data.content.length === 0) {
+    console.warn('Document had invalid content, setting default content');
     data.content = [{ type: 'paragraph', children: [{ text: '' }] }];
   }
   
@@ -73,6 +75,7 @@ export async function createDocument(document: Omit<Partial<Document>, 'title'> 
     .single();
 
   if (error) {
+    console.error('Error creating document:', error);
     throw new Error(error.message);
   }
   
@@ -86,6 +89,9 @@ export async function updateDocument(id: string, document: Partial<Document>) {
     if (!Array.isArray(document.content) || document.content.length === 0) {
       document.content = [{ type: 'paragraph', children: [{ text: '' }] }];
     }
+    
+    // Deep clone the content to ensure we're not affected by reference issues
+    document.content = JSON.parse(JSON.stringify(document.content));
   }
   
   console.log('Updating document with content:', document.content);
@@ -110,10 +116,10 @@ export async function updateDocument(id: string, document: Partial<Document>) {
         content: currentDoc.content,
         version: currentDoc.version,
         user_id: userId,
-        change_summary: 'Document updated'
+        change_summary: document.title ? `Updated title to ${document.title}` : 'Updated document content'
       });
     
-    // Now update the document with stringified content to ensure proper JSON storage
+    // Now update the document
     const { data, error } = await supabase
       .from('documents')
       .update({

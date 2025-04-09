@@ -18,6 +18,8 @@ interface DocumentEditorProps {
   onChange: (value: Descendant[]) => void;
   title?: string;
   onSave?: () => void;
+  isSaving?: boolean;
+  lastSaved?: Date | null;
 }
 
 // Default valid empty slate content
@@ -30,7 +32,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
   initialValue, 
   onChange, 
   title = "Untitled Security Document",
-  onSave 
+  onSave,
+  isSaving = false,
+  lastSaved = null
 }) => {
   // Use initialValue from props, but fallback to empty content if it's empty or invalid
   const defaultValue = useMemo(() => {
@@ -46,7 +50,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
   
   const [value, setValue] = useState<Descendant[]>(defaultValue);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [securityScore, setSecurityScore] = useState<number>(0);
   
   const editor = useMemo(() => {
@@ -87,6 +90,15 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
         securityBlocks++;
         score += 10;
       }
+      
+      // Check for security keywords in text content
+      const textContent = JSON.stringify(node);
+      const securityKeywords = ['security', 'vulnerability', 'risk', 'threat', 'compliance', 'policy', 'control'];
+      securityKeywords.forEach(keyword => {
+        if (textContent.toLowerCase().includes(keyword.toLowerCase())) {
+          score += 2;
+        }
+      });
     });
     
     // Add points for document length/complexity
@@ -115,11 +127,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
     if (onSave) {
       console.log('Saving document with content:', value);
       onSave();
-      setLastSaved(new Date());
-      toast({
-        title: "Document saved",
-        description: "Your security document has been saved successfully.",
-      });
     }
   }, [onSave, value]);
 
@@ -152,9 +159,13 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
             AI Assistant
           </Button>
           
-          <Button onClick={handleSave} className="bg-blue-500 hover:bg-blue-600 flex items-center gap-2">
+          <Button 
+            onClick={handleSave} 
+            className="bg-blue-500 hover:bg-blue-600 flex items-center gap-2"
+            disabled={isSaving}
+          >
             <Save className="h-4 w-4" />
-            Save
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>

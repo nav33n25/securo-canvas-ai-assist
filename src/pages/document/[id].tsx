@@ -10,7 +10,7 @@ import DocumentEditor from '@/components/editor/DocumentEditor';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Descendant } from 'slate';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 const DocumentPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +20,7 @@ const DocumentPage = () => {
   const [documentTitle, setDocumentTitle] = useState('');
   const [editorContent, setEditorContent] = useState<Descendant[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   
   // Get document query
   const { data: document, isLoading, error, refetch } = useQuery({
@@ -46,6 +47,7 @@ const DocumentPage = () => {
         description: "Your security document has been saved successfully.",
       });
       setHasChanges(false);
+      setLastSaved(new Date());
       console.log('Document saved successfully:', data);
     },
     onError: (error: any) => {
@@ -73,6 +75,12 @@ const DocumentPage = () => {
         console.warn('Invalid document content, setting default');
         setEditorContent([{ type: 'paragraph', children: [{ text: '' }] }]);
       }
+      
+      // If the document has an updated_at timestamp, use that for last saved
+      if (document.updated_at) {
+        setLastSaved(new Date(document.updated_at));
+      }
+      
       setHasChanges(false);
     }
   }, [document]);
@@ -161,32 +169,15 @@ const DocumentPage = () => {
   return (
     <AppLayout>
       <div className="container mx-auto py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/documents')}
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-          </div>
-          
-          {hasChanges && (
-            <div className="flex items-center">
-              <span className="text-amber-500 text-sm mr-2">Unsaved changes</span>
-              <Button 
-                onClick={handleSave} 
-                size="sm"
-                disabled={isSaving}
-                className="bg-blue-500 hover:bg-blue-600"
-              >
-                <Save className="h-3 w-3 mr-1" />
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          )}
+        <div className="flex items-center mb-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/documents')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
         </div>
         
         {isLoading ? (
@@ -212,6 +203,8 @@ const DocumentPage = () => {
               onChange={handleContentChange}
               title={documentTitle || "Untitled Security Document"}
               onSave={handleSave}
+              isSaving={isSaving}
+              lastSaved={lastSaved}
             />
           </>
         )}
