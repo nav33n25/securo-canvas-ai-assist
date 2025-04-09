@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
@@ -199,7 +200,11 @@ const Dashboard: React.FC = () => {
           let firstName = '';
           let lastName = '';
           
-          if (item.profiles && typeof item.profiles === 'object' && item.profiles !== null && !('error' in item.profiles)) {
+          // Fix for TS18047: Add proper null checking for item.profiles
+          if (item.profiles && 
+              typeof item.profiles === 'object' && 
+              item.profiles !== null && 
+              !('error' in item.profiles)) {
             firstName = item.profiles.first_name || '';
             lastName = item.profiles.last_name || '';
           }
