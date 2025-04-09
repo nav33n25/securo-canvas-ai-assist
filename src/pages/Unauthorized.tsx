@@ -1,94 +1,110 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { UserRole, useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Shield, Lock, ArrowLeft } from "lucide-react";
-import AppLayout from "@/components/layout/AppLayout";
+import React from 'react';
+import { useLocation, Link } from 'react-router-dom';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, Lock, ArrowLeft, Shield } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 
-const Unauthorized = () => {
+const Unauthorized: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, subscriptionPlan } = useAuth();
   
-  // Parse query parameters to get required roles
+  // Extract required role from URL params
   const searchParams = new URLSearchParams(location.search);
-  const requiredRolesParam = searchParams.get('requiredRole') || '';
-  const currentRole = searchParams.get('currentRole') || role || 'unknown';
+  const requiredRoles = searchParams.get('requiredRole')?.split(',') as UserRole[] || [];
   
-  const requiredRoles = requiredRolesParam.split(',').filter(Boolean) as UserRole[];
+  // Get highest required role for display
+  const highestRequiredRole = requiredRoles.length > 0 
+    ? requiredRoles[requiredRoles.length - 1] 
+    : null;
   
-  // Format role names for display
-  const formatRole = (role: string) => {
-    return role.replace('_', ' ').replace(/\b\w/g, char => char.toUpperCase());
+  // Get readable role names
+  const getRoleName = (role: UserRole) => {
+    switch(role) {
+      case 'individual': return 'Individual';
+      case 'team_member': return 'Team Member';
+      case 'team_manager': return 'Team Manager';
+      case 'administrator': return 'Administrator';
+      default: return role;
+    }
   };
   
-  useEffect(() => {
-    console.error(
-      "403 Error: User attempted to access restricted route:",
-      location.pathname,
-      "Required roles:", requiredRoles,
-      "Current role:", currentRole
-    );
-  }, [location.pathname, requiredRoles, currentRole]);
-
+  // Get current role name
+  const currentRoleName = role ? getRoleName(role) : 'Unknown';
+  
+  // Get required role name
+  const requiredRoleName = highestRequiredRole ? getRoleName(highestRequiredRole) : 'higher permission';
+  
+  // Get subscription plan name
+  const getSubscriptionName = (plan: string) => {
+    switch(plan) {
+      case 'free': return 'Free';
+      case 'pro': return 'Pro';
+      case 'team': return 'Team';
+      case 'enterprise': return 'Enterprise';
+      default: return plan;
+    }
+  };
+  
   return (
-    <AppLayout>
-      <div className="container mx-auto py-12 px-4">
-        <div className="max-w-md mx-auto bg-card rounded-lg border shadow-lg p-6">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Lock className="h-8 w-8 text-red-500" />
+    <div className="h-screen flex items-center justify-center bg-background p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration:.5 }}
+        className="w-full max-w-md"
+      >
+        <Card className="border-red-200 dark:border-red-900">
+          <CardHeader className="pb-4">
+            <div className="flex justify-center mb-4">
+              <div className="bg-red-100 dark:bg-red-900/30 rounded-full p-4">
+                <Lock className="h-12 w-12 text-red-600 dark:text-red-400" />
+              </div>
             </div>
-            <h1 className="text-3xl font-bold mb-2">Access Denied</h1>
-            <p className="text-muted-foreground">
-              You don't have permission to access this page.
-            </p>
-          </div>
-          
-          <div className="bg-muted/50 rounded-md p-4 mb-6">
-            <h2 className="font-medium mb-2">Required Permission Level</h2>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {requiredRoles.map((role, index) => (
-                <div key={index} className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm flex items-center">
-                  <Shield className="h-3.5 w-3.5 mr-1" />
-                  {formatRole(role)}
-                </div>
-              ))}
+            <CardTitle className="text-center text-xl font-bold">Access Restricted</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="p-3 bg-muted rounded-md">
+              <div className="flex items-center justify-center mb-2">
+                <Shield className="h-5 w-5 text-muted-foreground mr-2" />
+                <p className="text-sm font-medium">Permission Required</p>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                This page requires <span className="font-medium">{requiredRoleName}</span> access or higher
+              </p>
             </div>
             
-            <h2 className="font-medium mb-2">Your Current Role</h2>
-            <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm inline-flex items-center">
-              <Shield className="h-3.5 w-3.5 mr-1" />
-              {formatRole(currentRole)}
+            <div>
+              <p className="mb-1">Your current role: <span className="font-medium">{currentRoleName}</span></p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Your current subscription: {getSubscriptionName(subscriptionPlan || 'free')}
+              </p>
+              
+              <div className="flex items-center justify-center space-x-1">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <p className="text-sm text-amber-500">
+                  You don't have sufficient permissions to access this feature
+                </p>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              variant="default" 
-              className="flex-1"
-              onClick={() => navigate('/dashboard')}
-            >
-              Go to Dashboard
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-2">
+            <Button variant="default" className="w-full" asChild>
+              <Link to="/dashboard">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Return to Dashboard
+              </Link>
             </Button>
-            <Button 
-              variant="outline" 
-              className="flex-1"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Go Back
+            <Button variant="outline" className="w-full" asChild>
+              <Link to="/auth">
+                Change Account
+              </Link>
             </Button>
-          </div>
-          
-          {currentRole !== 'administrator' && (
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              Need access? Contact your administrator to upgrade your permissions.
-            </div>
-          )}
-        </div>
-      </div>
-    </AppLayout>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </div>
   );
 };
 

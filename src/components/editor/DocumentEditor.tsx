@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Editor, Transforms, Element as SlateElement, Node } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -12,6 +11,9 @@ import AIAssistantPanel from './AIAssistantPanel';
 import { toast } from '@/components/ui/use-toast';
 import { CustomElement, CustomText } from '@/types/slate';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DocumentEditorProps {
   initialValue: Descendant[];
@@ -20,6 +22,7 @@ interface DocumentEditorProps {
   onSave?: () => void;
   isSaving?: boolean;
   lastSaved?: Date | null;
+  readOnly?: boolean;
 }
 
 // Default valid empty slate content
@@ -34,7 +37,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
   title = "Untitled Security Document",
   onSave,
   isSaving = false,
-  lastSaved = null
+  lastSaved = null,
+  readOnly = false
 }) => {
   console.log('DocumentEditor render with initialValue length:', 
     Array.isArray(initialValue) ? initialValue.length : 'not an array');
@@ -209,6 +213,71 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
     setShowAIAssistant(prev => !prev);
   }, []);
 
+  // Add role-based access
+  const { role } = useAuth();
+  
+  // Add security template functionality
+  const [showSecurityOptions, setShowSecurityOptions] = useState(false);
+  
+  // Define security-specific blocks based on roles
+  const securityTemplateOptions = [
+    {
+      title: 'Vulnerability Details',
+      roles: ['individual', 'team_member', 'team_manager', 'administrator'],
+      template: [
+        { type: 'heading', level: 2, children: [{ text: 'Vulnerability Details' }] },
+        { type: 'paragraph', children: [{ text: 'Description: ' }] },
+        { type: 'paragraph', children: [{ text: 'Severity: High/Medium/Low' }] },
+        { type: 'paragraph', children: [{ text: 'Affected Components: ' }] },
+        { type: 'paragraph', children: [{ text: 'Reproduction Steps: ' }] },
+      ]
+    },
+    {
+      title: 'Risk Assessment',
+      roles: ['team_member', 'team_manager', 'administrator'],
+      template: [
+        { type: 'heading', level: 2, children: [{ text: 'Risk Assessment' }] },
+        { type: 'paragraph', children: [{ text: 'Impact: ' }] },
+        { type: 'paragraph', children: [{ text: 'Likelihood: ' }] },
+        { type: 'paragraph', children: [{ text: 'Overall Risk: ' }] },
+        { type: 'paragraph', children: [{ text: 'Business Context: ' }] },
+      ]
+    },
+    {
+      title: 'Compliance Requirements',
+      roles: ['team_manager', 'administrator'],
+      template: [
+        { type: 'heading', level: 2, children: [{ text: 'Compliance Requirements' }] },
+        { type: 'paragraph', children: [{ text: 'Regulatory Standards: ' }] },
+        { type: 'paragraph', children: [{ text: 'Control Requirements: ' }] },
+        { type: 'paragraph', children: [{ text: 'Audit Evidence: ' }] },
+      ]
+    },
+    {
+      title: 'Executive Summary',
+      roles: ['team_manager', 'administrator'],
+      template: [
+        { type: 'heading', level: 2, children: [{ text: 'Executive Summary' }] },
+        { type: 'paragraph', children: [{ text: 'Key Findings: ' }] },
+        { type: 'paragraph', children: [{ text: 'Business Impact: ' }] },
+        { type: 'paragraph', children: [{ text: 'Recommended Actions: ' }] },
+        { type: 'paragraph', children: [{ text: 'Timeline: ' }] },
+      ]
+    }
+  ];
+  
+  // Filter template options based on user role
+  const availableTemplateOptions = securityTemplateOptions.filter(option => {
+    if (!role) return false;
+    return option.roles.includes(role);
+  });
+
+  // Add function to insert template content
+  const insertSecurityTemplate = useCallback((templateOption) => {
+    editor.insertNodes(templateOption.template);
+    setShowSecurityOptions(false);
+  }, [editor]);
+
   return (
     <div className="flex flex-col h-full space-y-4">
       <div className="flex justify-between items-center flex-wrap gap-2">
@@ -278,6 +347,59 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
           </div>
         </CardContent>
       </Card>
+      
+      {/* Add a security templates toolbar */}
+      {!readOnly && (
+        <div className="mb-2 flex items-center">
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSecurityOptions(!showSecurityOptions)}
+              className="flex items-center gap-2 mr-2"
+            >
+              <Shield className="h-4 w-4" />
+              <span>Security Templates</span>
+            </Button>
+            
+            {showSecurityOptions && (
+              <div className="absolute top-full left-0 mt-1 w-64 z-50 bg-background border rounded-md shadow-md p-2">
+                <div className="text-sm font-medium mb-2">Insert Security Content</div>
+                <div className="space-y-1">
+                  {availableTemplateOptions.map((option) => (
+                    <Button 
+                      key={option.title} 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start text-left"
+                      onClick={() => insertSecurityTemplate(option)}
+                    >
+                      {option.title}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Add role indicator badge */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="ml-auto">
+                  {role === 'individual' && 'Individual Access'}
+                  {role === 'team_member' && 'Team Member Access'}
+                  {role === 'team_manager' && 'Team Manager Access'} 
+                  {role === 'administrator' && 'Administrator Access'}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Your current access level</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
     </div>
   );
 };

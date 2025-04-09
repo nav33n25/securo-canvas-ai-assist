@@ -123,6 +123,139 @@ const Sidebar: React.FC = () => {
     return requiredRoles.includes(role);
   };
 
+  // Define menu items with required roles
+  const menuItems = [
+    {
+      title: "Core",
+      items: [
+        {
+          title: "Dashboard",
+          icon: "dashboard",
+          path: "/dashboard",
+          roles: ["individual", "team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "Documents",
+          icon: "documents",
+          path: "/documents",
+          roles: ["individual", "team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "Templates",
+          icon: "templates",
+          path: "/templates",
+          roles: ["individual", "team_member", "team_manager", "administrator"]
+        }
+      ]
+    },
+    {
+      title: "Security Modules",
+      items: [
+        {
+          title: "Bug Bounty",
+          icon: "bug",
+          path: "/bug-bounty",
+          roles: ["individual", "team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "Compliance",
+          icon: "compliance",
+          path: "/compliance",
+          roles: ["team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "Asset Management",
+          icon: "assets",
+          path: "/assets",
+          roles: ["team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "Threat Intelligence",
+          icon: "threat",
+          path: "/threat-intel",
+          roles: ["team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "SOC Operations",
+          icon: "security",
+          path: "/soc",
+          roles: ["team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "Red Team",
+          icon: "redteam",
+          path: "/red-team",
+          roles: ["team_member", "team_manager", "administrator"]
+        }
+      ]
+    },
+    {
+      title: "Learning & Resources",
+      items: [
+        {
+          title: "Knowledge Base",
+          icon: "knowledge",
+          path: "/knowledge-base",
+          roles: ["individual", "team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "Learning Hub",
+          icon: "learning",
+          path: "/learning",
+          roles: ["individual", "team_member", "team_manager", "administrator"]
+        },
+        {
+          title: "Client Portal",
+          icon: "clients",
+          path: "/clients",
+          roles: ["individual", "team_manager", "administrator"]
+        }
+      ]
+    },
+    {
+      title: "Administration",
+      items: [
+        {
+          title: "Team Management",
+          icon: "team",
+          path: "/dashboard/team",
+          roles: ["team_manager", "administrator"]
+        },
+        {
+          title: "Workspace Settings",
+          icon: "settings",
+          path: "/workspace-settings",
+          roles: ["administrator"]
+        },
+        {
+          title: "AI Configuration",
+          icon: "ai",
+          path: "/ai-config",
+          roles: ["team_manager", "administrator"]
+        }
+      ]
+    }
+  ];
+  
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.map(section => {
+    // Filter items based on role
+    const filteredItems = section.items.filter(item => {
+      // If no role is set or no roles are specified for the item, don't show it
+      if (!role || !item.roles) return false;
+      
+      // Show if the user's role is in the item's allowed roles
+      return item.roles.includes(role as UserRole);
+    });
+    
+    // Only include sections that have visible items
+    return {
+      ...section,
+      items: filteredItems,
+      visible: filteredItems.length > 0
+    };
+  }).filter(section => section.visible);
+
   return (
     <SidebarContainer>
       <SidebarHeader className="flex flex-col gap-3 px-3 py-2">
@@ -157,38 +290,16 @@ const Sidebar: React.FC = () => {
           <SidebarGroupLabel>Core</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/dashboard')}>
-                  <Link to="/dashboard">
-                    <Layout />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/documents') || location.pathname.startsWith('/document/')}>
-                  <Link to="/documents">
-                    <FileText />
-                    <span>Documents</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/templates')}>
-                  <Link to="/templates">
-                    <FileCheck />
-                    <span>Templates</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/knowledge-base')}>
-                  <Link to="/knowledge-base">
-                    <Book />
-                    <span>Knowledge Base</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {filteredMenuItems[0].items.map((item) => (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton asChild isActive={isActive(item.path)}>
+                    <Link to={item.path}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -204,63 +315,16 @@ const Sidebar: React.FC = () => {
           {expandedSections.extensions && (
             <SidebarGroupContent>
               <SidebarMenu>
-                {/* Asset Management - Team Member+ */}
-                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive('/assets')}>
-                      <Link to="/assets">
-                        <HardDrive />
-                        <span>Asset Management</span>
+                {filteredMenuItems[1].items.map((item) => (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton asChild isActive={isActive(item.path)}>
+                      <Link to={item.path}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )}
-                
-                {/* Intelligence - Team Member+ */}
-                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive('/threat-intel')}>
-                      <Link to="/threat-intel">
-                        <Globe />
-                        <span>Intelligence</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-                
-                {/* Compliance - Team Member+ */}
-                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive('/compliance')}>
-                      <Link to="/compliance">
-                        <ClipboardCheck />
-                        <span>Compliance</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-                
-                {/* Ticketing - Team Member+ */}
-                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive('/ticketing')}>
-                      <Link to="/ticketing">
-                        <Ticket />
-                        <span>Ticketing</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-                
-                {/* AI Assistant - All users */}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/ai-config')}>
-                    <Link to="/ai-config">
-                      <Sparkles />
-                      <span>AI Assistant</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           )}
@@ -277,61 +341,16 @@ const Sidebar: React.FC = () => {
           {expandedSections.specialized && (
             <SidebarGroupContent>
               <SidebarMenu>
-                {/* Bug Bounty - All users */}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/bug-bounty')}>
-                    <Link to="/bug-bounty">
-                      <Bug />
-                      <span>Bug Bounty</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                
-                {/* Red Team Ops - Team Member+ */}
-                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive('/red-team')}>
-                      <Link to="/red-team">
-                        <Sword />
-                        <span>Red Team Ops</span>
+                {filteredMenuItems[2].items.map((item) => (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton asChild isActive={isActive(item.path)}>
+                      <Link to={item.path}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )}
-                
-                {/* Blue Team Ops/SOC - Team Member+ */}
-                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive('/soc')}>
-                      <Link to="/soc">
-                        <MonitorSmartphone />
-                        <span>Blue Team Ops</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-                
-                {/* Learning Hub - All users */}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/learning')}>
-                    <Link to="/learning">
-                      <GraduationCap />
-                      <span>Learning Hub</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                
-                {/* Client Portal - Individual and Team Manager+ */}
-                {hasAccess(['individual', 'team_manager', 'administrator']) && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive('/clients')}>
-                      <Link to="/clients">
-                        <ExternalLink />
-                        <span>Client Portal</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           )}
@@ -397,23 +416,23 @@ const Sidebar: React.FC = () => {
         </SidebarGroup>
         
         {/* Admin settings - Only for Administrators */}
-        {hasAccess(['administrator']) && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+        {filteredMenuItems[3].items.map((item) => (
+          <SidebarGroup key={item.path}>
+            <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/workspace-settings')}>
-                    <Link to="/workspace-settings">
-                      <Settings />
-                      <span>Workspace Settings</span>
+                  <SidebarMenuButton asChild isActive={isActive(item.path)}>
+                    <Link to={item.path}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        ))}
       </SidebarContent>
       
       <SidebarFooter>
