@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { SubscriptionTier } from '@/types/auth-types';
+import type { SubscriptionTier } from '@/types/auth-types';
 
 interface UseFeatureAccessProps {
   user: User | null;
