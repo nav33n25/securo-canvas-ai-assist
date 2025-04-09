@@ -1,11 +1,11 @@
-
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Lock, ArrowLeft, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/types/auth-types';
 
 const Unauthorized: React.FC = () => {
   const location = useLocation();
@@ -32,7 +32,7 @@ const Unauthorized: React.FC = () => {
   };
   
   // Get current role name
-  const currentRoleName = role ? getRoleName(role) : 'Unknown';
+  const currentRoleName = role ? getRoleName(role as UserRole) : 'Unknown';
   
   // Get required role name
   const requiredRoleName = highestRequiredRole ? getRoleName(highestRequiredRole) : 'higher permission';
