@@ -50,7 +50,7 @@ export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]>
         document_id: item.document_id,
         document_title: item.documents?.title || 'Untitled Document',
         user_id: userId,
-        user_name: `${firstName} ${lastName}`.trim(),
+        user_name: `${firstName} ${lastName}`.trim() || 'Unknown User',
         created_at: item.created_at,
         content: item.change_summary || 'Updated document'
       };
