@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Editor, Transforms, Element as SlateElement, Node } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -35,6 +36,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
   isSaving = false,
   lastSaved = null
 }) => {
+  console.log('DocumentEditor render with initialValue length:', 
+    Array.isArray(initialValue) ? initialValue.length : 'not an array');
+
   // Use initialValue from props, but fallback to empty content if it's empty or invalid
   const defaultValue = useMemo(() => {
     if (Array.isArray(initialValue) && initialValue.length > 0) {
@@ -42,8 +46,11 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       const isValid = initialValue.every(node => 
         typeof (node as any).type === 'string' && Array.isArray((node as any).children)
       );
-      console.log('Initial content is valid:', isValid, initialValue);
-      return isValid ? initialValue : emptyEditorContent;
+      console.log('Initial content is valid:', isValid);
+      if (isValid) {
+        console.log('Using provided initial value');
+        return initialValue;
+      }
     }
     console.log('Using empty content because initialValue is invalid');
     return emptyEditorContent;
@@ -64,7 +71,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
     if (Array.isArray(initialValue) && initialValue.length > 0) {
       // Additional validation to ensure content conforms to expected types
       try {
-        console.log('Updating editor content from new initialValue');
+        console.log('Updating editor content from new initialValue, length:', initialValue.length);
         setValue(initialValue);
         previousValueRef.current = JSON.stringify(initialValue);
         calculateSecurityScore(initialValue);
@@ -76,6 +83,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
           description: "There was an issue loading the document content.",
         });
       }
+    } else {
+      console.warn('Received invalid initialValue, using empty content');
+      setValue(emptyEditorContent);
     }
   }, [initialValue]);
 
@@ -184,17 +194,23 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
       // Process each child to ensure it has text property
       const children = node.children.map((child: any) => {
-        if (typeof child === 'object' && child !== null) {
-          // If it's a nested element, recursively normalize it
-          if (typeof child.type === 'string' && Array.isArray(child.children)) {
-            const normalizedChildren = child.children.map((grandchild: any) => {
-              return typeof grandchild.text === 'string' ? grandchild : { text: '' };
-            });
-            return { ...child, children: normalizedChildren };
-          }
-          // Otherwise it should be a text node with a text property
-          return { text: typeof child.text === 'string' ? child.text : '' };
+        if (typeof child !== 'object' || child === null) {
+          return { text: '' };
         }
+        
+        // If it's a text node
+        if (typeof child.text === 'string') {
+          return child;
+        }
+        
+        // If it's a nested element
+        if (typeof child.type === 'string' && Array.isArray(child.children)) {
+          const normalizedChildren = child.children.map((grandchild: any) => {
+            return typeof grandchild.text === 'string' ? grandchild : { text: '' };
+          });
+          return { ...child, children: normalizedChildren };
+        }
+        
         return { text: '' };
       });
 
@@ -204,6 +220,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
   // Handle content changes with debounce
   const handleChange = useCallback((newValue: Descendant[]) => {
+    console.log('Editor content changed, length:', newValue.length);
+    
     // Set the value immediately for the editor
     setValue(newValue);
     
@@ -220,7 +238,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       // Only update if content actually changed
       const contentString = JSON.stringify(normalizedContent);
       if (contentString !== previousValueRef.current) {
-        console.log('Content changed, notifying parent', normalizedContent);
+        console.log('Content changed, notifying parent, length:', normalizedContent.length);
         previousValueRef.current = contentString;
         onChange(normalizedContent);
         calculateSecurityScore(normalizedContent);
@@ -245,7 +263,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       
       // Force update parent with latest content before saving
       onChange(normalizedContent);
-      console.log('Saving normalized document content:', normalizedContent);
+      console.log('Saving normalized document content, length:', normalizedContent.length);
       
       // Small delay to ensure state updates propagate
       setTimeout(() => {
@@ -260,13 +278,13 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
   return (
     <div className="flex flex-col h-full space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <div className="flex items-center gap-2 text-secure">
           <Shield className="h-6 w-6" />
           <h1 className="text-2xl font-semibold">{title}</h1>
         </div>
         
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
           {lastSaved && (
             <div className="text-sm text-muted-foreground flex items-center">
               <Clock className="h-4 w-4 mr-1" />
@@ -283,25 +301,17 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
             onClick={toggleAIAssistant}
             variant={showAIAssistant ? "default" : "outline"}
             className={showAIAssistant ? "bg-secure hover:bg-secure-darker" : ""}
+            size="sm"
           >
             AI Assistant
-          </Button>
-          
-          <Button 
-            onClick={handleSave} 
-            className="bg-blue-500 hover:bg-blue-600 flex items-center gap-2"
-            disabled={isSaving}
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>
       
       <Card className="shadow-md border-secure/20 bg-slate-900 text-white">
         <CardContent className="p-0">
-          <div className="flex gap-4 h-full">
-            <div className={`flex-1 ${showAIAssistant ? 'w-2/3' : 'w-full'}`}>
+          <div className="flex flex-col lg:flex-row gap-4 h-full">
+            <div className={`flex-1 ${showAIAssistant ? 'lg:w-2/3' : 'w-full'}`}>
               <Toolbar editor={editor} onToggleAI={toggleAIAssistant} showAI={showAIAssistant} />
               <div className="border border-slate-700 rounded-md p-4 mt-2 min-h-[500px] slate-content bg-slate-900 shadow-inner">
                 <Slate 
@@ -322,7 +332,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
             </div>
             
             {showAIAssistant && (
-              <div className="w-1/3">
+              <div className="w-full lg:w-1/3 mt-4 lg:mt-0">
                 <AIAssistantPanel editor={editor} />
               </div>
             )}

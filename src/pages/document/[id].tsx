@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -39,8 +40,13 @@ const DocumentPage = () => {
         console.log('Preparing to save document', {
           id,
           title: documentTitle,
-          contentLength: editorContent.length
+          contentLength: editorContent?.length || 0
         });
+        
+        if (!editorContent || !Array.isArray(editorContent) || editorContent.length === 0) {
+          console.error('Invalid editor content to save:', editorContent);
+          throw new Error('Cannot save empty content');
+        }
         
         // Create a deep copy to ensure we're not affected by references
         const contentCopy = JSON.parse(JSON.stringify(editorContent));
@@ -78,7 +84,15 @@ const DocumentPage = () => {
   // Set initial document data
   useEffect(() => {
     if (document && !initialLoadCompleted.current) {
-      console.log('Document loaded, setting initial data:', document);
+      console.log('Document loaded, setting initial data:', {
+        id: document.id,
+        title: document.title,
+        contentExists: !!document.content,
+        contentIsArray: Array.isArray(document.content),
+        contentLength: document.content?.length || 0,
+        version: document.version
+      });
+      
       setDocumentTitle(document.title);
       
       // Ensure document content is valid
@@ -137,18 +151,26 @@ const DocumentPage = () => {
 
   // Handle content changes
   const handleContentChange = useCallback((newContent: Descendant[]) => {
-    if (Array.isArray(newContent) && newContent.length > 0) {
-      console.log('Content changed in document page, length:', newContent.length);
-      
-      // Ensure we're setting a new reference to trigger state updates
-      setEditorContent(newContent);
-      setHasChanges(true);
-      
-      // Reset auto-save timer
-      setupAutoSave();
-    } else {
-      console.error('Invalid content received from editor:', newContent);
+    console.log('Content changed in document page');
+    
+    if (!Array.isArray(newContent)) {
+      console.error('Received non-array content:', newContent);
+      return;
     }
+    
+    if (newContent.length === 0) {
+      console.warn('Received empty content array, adding default paragraph');
+      newContent = [{ type: 'paragraph', children: [{ text: '' }] }];
+    }
+    
+    console.log('Setting editor content with length:', newContent.length);
+    
+    // Ensure we're setting a new reference to trigger state updates
+    setEditorContent([...newContent]);
+    setHasChanges(true);
+    
+    // Reset auto-save timer
+    setupAutoSave();
   }, [setupAutoSave]);
 
   // Handle saving the document
@@ -162,7 +184,7 @@ const DocumentPage = () => {
       return;
     }
 
-    if (!editorContent || !Array.isArray(editorContent) || editorContent.length === 0) {
+    if (!editorContent || !Array.isArray(editorContent)) {
       console.error("Invalid editor content:", editorContent);
       toast({
         variant: "destructive",
@@ -170,6 +192,11 @@ const DocumentPage = () => {
         description: "The document content is invalid. Please refresh and try again.",
       });
       return;
+    }
+
+    if (editorContent.length === 0) {
+      console.warn("Empty editor content, adding default paragraph");
+      setEditorContent([{ type: 'paragraph', children: [{ text: '' }] }]);
     }
 
     // Log the content being saved
@@ -234,12 +261,13 @@ const DocumentPage = () => {
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-4">
-        <div className="flex items-center justify-between mb-4">
+      <div className="container mx-auto py-4 px-4 sm:px-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => navigate('/documents')}
+            className="mr-2"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
@@ -57,14 +58,17 @@ export async function getDocument(id: string) {
     throw new Error('Document not found');
   }
 
+  console.log('Raw document content from database:', data.content);
+  
   // Ensure we have valid content structure using our sanitize function
   data.content = sanitizeContent(data.content);
   
-  console.log('Retrieved document:', {
+  console.log('Document after sanitization:', {
     id: data.id,
     title: data.title,
     contentLength: data.content?.length || 0,
-    version: data.version
+    version: data.version,
+    firstNodeType: data.content && data.content.length > 0 ? data.content[0].type : 'none'
   });
   
   return data as Document;
@@ -93,8 +97,11 @@ export async function createDocument(document: Omit<Partial<Document>, 'title'> 
 
 // Helper function to ensure content is properly structured
 function sanitizeContent(content: any): any[] {
-  // If content isn't an array, create a default empty document
-  if (!Array.isArray(content) || content.length === 0) {
+  console.log('Sanitizing content:', typeof content);
+  
+  // If content isn't an array or is null/undefined, create a default empty document
+  if (!content || !Array.isArray(content) || content.length === 0) {
+    console.log('Content is invalid, returning default paragraph');
     return [{ type: 'paragraph', children: [{ text: '' }] }];
   }
 
@@ -121,7 +128,7 @@ function sanitizeContent(content: any): any[] {
         return { type: 'paragraph', children: [{ text: '' }] };
       }
       
-      // Ensure node has a children array
+      // Ensure children array exists and has at least one text node
       if (!Array.isArray(node.children)) {
         return { ...node, children: [{ text: '' }] };
       }
@@ -158,6 +165,7 @@ function sanitizeContent(content: any): any[] {
       return [{ type: 'paragraph', children: [{ text: '' }] }];
     }
     
+    console.log('Sanitized content successfully, nodes count:', parsed.length);
     return parsed;
   } catch (error) {
     console.error('Error sanitizing content:', error);
@@ -166,7 +174,12 @@ function sanitizeContent(content: any): any[] {
 }
 
 export async function updateDocument(id: string, document: Partial<Document>) {
-  console.log('updateDocument called with:', { id, document });
+  console.log('updateDocument called with:', { id, documentTitle: document.title });
+  
+  if (document.content) {
+    console.log('Content length to save:', document.content.length);
+    console.log('First node type:', document.content[0]?.type || 'unknown');
+  }
   
   // Clone document to avoid mutating the original
   const documentToUpdate = { ...document };
@@ -174,15 +187,18 @@ export async function updateDocument(id: string, document: Partial<Document>) {
   // Validate content before saving
   if (documentToUpdate.content !== undefined) {
     try {
+      // Make sure content is properly serialized to avoid any reference issues
+      const contentCopy = JSON.parse(JSON.stringify(documentToUpdate.content));
+      
       // Sanitize the content to ensure it's valid
-      const sanitizedContent = sanitizeContent(documentToUpdate.content);
+      const sanitizedContent = sanitizeContent(contentCopy);
       
       if (sanitizedContent.length === 0) {
         throw new Error('Invalid document content: Empty after sanitization');
       }
       
       // Log sample of the content for debugging
-      console.log('Sanitized content sample:', 
+      console.log('Content to save:', 
         sanitizedContent.slice(0, 2),
         `(${sanitizedContent.length} nodes total)`
       );
@@ -243,12 +259,12 @@ export async function updateDocument(id: string, document: Partial<Document>) {
       throw new Error('No data returned from update operation');
     }
 
-    console.log('Document updated successfully:', data);
-    
-    // Apply sanitization to returned data for consistency
-    if (data.content) {
-      data.content = sanitizeContent(data.content);
-    }
+    console.log('Document updated successfully:', {
+      id: data.id,
+      title: data.title,
+      contentLength: data.content?.length || 0,
+      version: data.version
+    });
     
     return data as Document;
   } catch (error: any) {
