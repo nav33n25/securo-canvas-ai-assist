@@ -94,7 +94,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const defaultTab = searchParams.get('tab') || 'signin';
+  const defaultTab = searchParams.get('tab') || 'signIn';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -105,15 +105,29 @@ const Auth = () => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [plan, setPlan] = useState<SubscriptionPlan>('free');
   const [step, setStep] = useState(1);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(defaultTab === 'signUp');
   const [selectedPlan, setSelectedPlan] = useState<PlanInfo | null>(null);
   const [activeTab, setActiveTab] = useState(defaultTab);
 
+  useEffect(() => {
+    setIsSignUp(defaultTab === 'signUp');
+  }, [defaultTab]);
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (loading) {
+      return; // Prevent duplicate submissions
+    }
+    
     setLoading(true);
-    await signIn(email, password);
-    setLoading(false);
+    try {
+      await signIn(email, password);
+    } catch (error) {
+      console.error('Error in handleSignIn:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {

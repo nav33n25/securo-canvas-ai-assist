@@ -91,6 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fetch profile information if user is logged in
         if (session?.user) {
           fetchProfile(session.user.id);
+          
+          // Redirect to dashboard if not already there
+          if (window.location.pathname === '/auth') {
+            navigate('/dashboard');
+          }
         } else {
           setProfile(null);
           setRole(null);
@@ -235,26 +240,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
       if (error) {
         toast({
           variant: "destructive",
           title: "Authentication failed",
           description: error.message,
         });
-      } else {
+        return;
+      }
+      
+      if (data?.user) {
+        // Explicitly fetch the user profile to ensure it's loaded
+        await fetchProfile(data.user.id);
+        
+        // Use navigate directly instead of relying on the effect
         navigate('/dashboard');
+        
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
         });
       }
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast({
         variant: "destructive",
         title: "Authentication failed",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
       });
+    } finally {
+      setLoading(false);
     }
   };
 

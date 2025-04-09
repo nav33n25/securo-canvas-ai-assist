@@ -66,6 +66,13 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({
   const [selectedRole, setSelectedRole] = React.useState<UserRole | null>(initialRole || currentRole);
   const navigate = useNavigate();
 
+  // Update selectedRole when initialRole changes
+  React.useEffect(() => {
+    if (initialRole) {
+      setSelectedRole(initialRole);
+    }
+  }, [initialRole]);
+
   const roles: {
     title: string;
     description: string;
