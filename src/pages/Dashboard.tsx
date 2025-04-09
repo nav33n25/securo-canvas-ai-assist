@@ -25,7 +25,7 @@ import {
   BarChart3,
   Clock
 } from 'lucide-react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
@@ -58,7 +58,6 @@ interface ActivityItem {
   content?: string;
 }
 
-// Types for Supabase query responses
 interface DocumentVersionResponse {
   id: string;
   created_at: string;
@@ -70,7 +69,7 @@ interface DocumentVersionResponse {
   profiles: {
     first_name: string | null;
     last_name: string | null;
-  } | null;
+  } | null | { error: true };
 }
 
 const dashboardWidgets: DashboardWidget[] = [
@@ -248,8 +247,12 @@ const Dashboard: React.FC = () => {
         if (error) throw error;
         
         const transformedActivities: ActivityItem[] = (data || []).map(item => {
-          const firstName = item.profiles && !('error' in item.profiles) ? item.profiles.first_name : '';
-          const lastName = item.profiles && !('error' in item.profiles) ? item.profiles.last_name : '';
+          const profilesObj = item.profiles && typeof item.profiles === 'object' && !('error' in item.profiles) 
+            ? item.profiles 
+            : { first_name: null, last_name: null };
+          
+          const firstName = profilesObj.first_name || '';
+          const lastName = profilesObj.last_name || '';
           
           return {
             id: item.id,
@@ -257,7 +260,7 @@ const Dashboard: React.FC = () => {
             document_id: item.document_id,
             document_title: item.documents?.title || 'Untitled Document',
             user_id: user.id,
-            user_name: `${firstName || ''} ${lastName || ''}`.trim(),
+            user_name: `${firstName} ${lastName}`.trim(),
             created_at: item.created_at,
             content: item.change_summary || 'Updated document'
           };
@@ -350,7 +353,7 @@ const Dashboard: React.FC = () => {
                         <div>
                           <p className="font-medium">{activity.user_name || 'A user'}</p>
                           <p className="text-sm text-muted-foreground">
-                            {activity.content} in <RouterLink to={`/document/${activity.document_id}`} className="text-secure hover:underline">{activity.document_title}</RouterLink>
+                            {activity.content} in <Link to={`/document/${activity.document_id}`} className="text-secure hover:underline">{activity.document_title}</Link>
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
@@ -367,9 +370,9 @@ const Dashboard: React.FC = () => {
               </CardContent>
               <CardFooter>
                 <Button variant="outline" className="w-full" asChild>
-                  <RouterLink to="/documents">
+                  <Link to="/documents">
                     View All Documents
-                  </RouterLink>
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -399,9 +402,9 @@ const Dashboard: React.FC = () => {
                           </p>
                         </div>
                         <Button variant="ghost" size="sm" asChild>
-                          <RouterLink to={`/document/${doc.id}`}>
+                          <Link to={`/document/${doc.id}`}>
                             <span>Open</span>
-                          </RouterLink>
+                          </Link>
                         </Button>
                       </div>
                     ))}
@@ -410,9 +413,9 @@ const Dashboard: React.FC = () => {
                   <div className="text-center py-6">
                     <p className="text-muted-foreground">No documents found</p>
                     <Button className="mt-4" asChild>
-                      <RouterLink to="/documents?new=true">
+                      <Link to="/documents?new=true">
                         Create Your First Document
-                      </RouterLink>
+                      </Link>
                     </Button>
                   </div>
                 )}
@@ -420,14 +423,14 @@ const Dashboard: React.FC = () => {
               <CardFooter>
                 <div className="flex w-full gap-3">
                   <Button variant="outline" className="flex-1" asChild>
-                    <RouterLink to="/documents">
+                    <Link to="/documents">
                       All Documents
-                    </RouterLink>
+                    </Link>
                   </Button>
                   <Button className="flex-1 bg-secure hover:bg-secure-darker" asChild>
-                    <RouterLink to="/documents?new=true">
+                    <Link to="/documents?new=true">
                       New Document
-                    </RouterLink>
+                    </Link>
                   </Button>
                 </div>
               </CardFooter>
@@ -443,7 +446,7 @@ const Dashboard: React.FC = () => {
               <CardContent className="grid gap-4">
                 {filteredWidgets.slice(0, 6).map(widget => (
                   <Button key={widget.id} variant="outline" className="justify-start h-auto py-3" asChild>
-                    <RouterLink to={widget.link} className="flex items-center">
+                    <Link to={widget.link} className="flex items-center">
                       <div className={`mr-3 p-2 rounded-md ${widget.color}`}>
                         <widget.icon className="h-4 w-4" />
                       </div>
@@ -451,16 +454,16 @@ const Dashboard: React.FC = () => {
                         <div className="font-medium">{widget.title}</div>
                         <div className="text-xs text-muted-foreground">{widget.description}</div>
                       </div>
-                    </RouterLink>
+                    </Link>
                   </Button>
                 ))}
               </CardContent>
               <CardFooter>
                 <Button className="w-full bg-secure hover:bg-secure-darker" asChild>
-                  <RouterLink to="/documents?new=true">
+                  <Link to="/documents?new=true">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Create New Document
-                  </RouterLink>
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -496,9 +499,9 @@ const Dashboard: React.FC = () => {
                 </CardContent>
                 <CardFooter>
                   <Button variant="outline" className="w-full" asChild>
-                    <RouterLink to="/profile">
+                    <Link to="/profile">
                       Manage Your Profile
-                    </RouterLink>
+                    </Link>
                   </Button>
                 </CardFooter>
               </Card>
@@ -522,10 +525,10 @@ const Dashboard: React.FC = () => {
                 </CardHeader>
                 <CardFooter className="p-4 pt-0">
                   <Button variant="outline" className="w-full justify-between" asChild>
-                    <RouterLink to={widget.link}>
+                    <Link to={widget.link}>
                       <span>Open</span>
                       <ArrowRight className="h-4 w-4" />
-                    </RouterLink>
+                    </Link>
                   </Button>
                 </CardFooter>
               </Card>
@@ -543,10 +546,10 @@ const Dashboard: React.FC = () => {
               </CardHeader>
               <CardFooter className="p-4 pt-0">
                 <Button className="w-full justify-between bg-secure hover:bg-secure-darker" asChild>
-                  <RouterLink to="/documents?new=true">
+                  <Link to="/documents?new=true">
                     <span>Create</span>
                     <ArrowRight className="h-4 w-4" />
-                  </RouterLink>
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
