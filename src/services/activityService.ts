@@ -14,6 +14,12 @@ export interface ActivityItem {
 
 export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]> => {
   try {
+    // Add error handling if userId is not provided
+    if (!userId) {
+      console.warn('fetchActivityFeed called without userId');
+      return [];
+    }
+
     const { data, error } = await supabase
       .from('document_versions')
       .select(`
@@ -32,19 +38,18 @@ export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]>
       throw error;
     }
     
+    // Safely transform the data with proper null checks
     const transformedActivities: ActivityItem[] = (data || []).map(item => {
       let firstName = '';
       let lastName = '';
       
-      // First check if profiles exists and is not null
+      // Safely extract profile data
       if (item.profiles && typeof item.profiles === 'object') {
-        // Then use optional chaining to safely access properties
-        const profileData = item.profiles as { first_name?: string | null; last_name?: string | null } | null;
-        firstName = profileData?.first_name || '';
-        lastName = profileData?.last_name || '';
+        firstName = item.profiles.first_name || '';
+        lastName = item.profiles.last_name || '';
       }
       
-      // Safely access document title
+      // Safely extract document title
       const documentTitle = item.documents?.title || 'Untitled Document';
       
       return {

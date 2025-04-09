@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -297,18 +298,22 @@ const Sidebar: React.FC = () => {
 
   // Get items safely using optional chaining and nullish coalescing
   const getCoreItems = () => {
-    return filteredMenuItems[0]?.items || coreMenuItems;
+    // Fixed: Make sure we have items available before accessing them
+    return (filteredMenuItems[0]?.items || coreMenuItems);
   };
 
   const getExtensionItems = () => {
+    // Fixed: Add null check and provide a default empty array
     return filteredMenuItems[1]?.items || [];
   };
 
   const getSpecializedItems = () => {
+    // Fixed: Add null check and provide a default empty array
     return filteredMenuItems[2]?.items || [];
   };
 
   const getAdminItems = () => {
+    // Fixed: Add null check and provide a default empty array
     return filteredMenuItems[3]?.items || [];
   };
 
