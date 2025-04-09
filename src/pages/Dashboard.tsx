@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
+import { Link } from 'react-router-dom';
 import { 
   BarChart, 
   CalendarDays, 
@@ -19,13 +20,12 @@ import {
   Compass,
   CheckCircle2,
   ArrowRight,
-  Link as LinkIcon,
+  LinkIcon,
   Sword,
   Radio,
   BarChart3,
   Clock
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
@@ -251,8 +251,8 @@ const Dashboard: React.FC = () => {
             ? item.profiles 
             : { first_name: null, last_name: null };
           
-          const firstName = profilesObj.first_name || '';
-          const lastName = profilesObj.last_name || '';
+          const firstName = profilesObj?.first_name || '';
+          const lastName = profilesObj?.last_name || '';
           
           return {
             id: item.id,
