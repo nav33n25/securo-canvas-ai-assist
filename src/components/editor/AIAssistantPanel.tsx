@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Editor, Transforms } from 'slate';
 import { 
@@ -64,7 +63,7 @@ const securityTemplates: Template[] = [
 ];
 
 const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ editor }) => {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState('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');
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
@@ -72,15 +71,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ editor }) => {
   const { toast } = useToast();
   
   const handleSendQuery = async () => {
-    if (!apiKey.trim()) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your Perplexity AI API key",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     if (!query.trim()) {
       toast({
         title: "Query Required",
@@ -94,9 +84,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ editor }) => {
     setResponse('');
     
     try {
-      // This is a mock response since we don't want to make actual API calls in this demo
-      // In a real implementation, you would uncomment and use this call
-      /*
       const result = await queryPerplexityAI(
         query,
         apiKey,
@@ -104,32 +91,6 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ editor }) => {
       );
       const aiResponse = result.choices[0].message.content;
       setResponse(aiResponse);
-      */
-      
-      // Mock response for demo purposes
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockResponse = `# Security Analysis
-
-Based on your request, here's what you should consider:
-
-## Key Findings
-
-1. Ensure your authentication system uses multi-factor authentication
-2. Implement proper session management
-3. Use TLS/SSL for all communications
-4. Regularly update and patch systems
-
-## Recommendations
-
-- Use OAuth 2.0 with OpenID Connect for authentication
-- Implement proper CSRF protection
-- Ensure secure password storage using bcrypt
-- Set appropriate security headers
-
-This analysis is based on current best practices in cybersecurity.`;
-      
-      setResponse(mockResponse);
     } catch (error) {
       toast({
         title: "Error",
@@ -184,18 +145,6 @@ This analysis is based on current best practices in cybersecurity.`;
           
           <TabsContent value="ask" className="space-y-4 mt-2">
             <div className="space-y-2">
-              <Label htmlFor="api-key" className="text-slate-300">Perplexity AI API Key</Label>
-              <Input 
-                id="api-key" 
-                type="password" 
-                placeholder="Enter your API key" 
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="bg-slate-900 border-slate-700 text-slate-100"
-              />
-            </div>
-            
-            <div className="space-y-2">
               <Label htmlFor="query" className="text-slate-300">Security Query</Label>
               <Textarea 
                 id="query" 
@@ -248,27 +197,27 @@ This analysis is based on current best practices in cybersecurity.`;
       
       <CardFooter className="border-t border-slate-700 pt-4 flex justify-between">
         <Button 
-          variant="outline" 
+          variant="outline"
           onClick={insertResponseToEditor}
           disabled={!response || loading}
-          className="bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800"
+          className="bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800 hover:text-slate-100"
         >
           Insert to Document
         </Button>
         
         <Button 
-          onClick={handleSendQuery} 
+          onClick={handleSendQuery}
           disabled={loading || !query.trim()}
-          className="bg-secure hover:bg-secure/90"
+          className="bg-secure hover:bg-secure-darker flex items-center gap-2"
         >
           {loading ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               Processing...
             </>
           ) : (
             <>
-              <Send className="h-4 w-4 mr-2" />
+              <Send className="h-4 w-4" />
               Send
             </>
           )}

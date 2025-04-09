@@ -1,19 +1,31 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 
+// Define a proper interface for the user profile
+interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  avatar_url?: string;
+  role?: string;
+  organization_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 type AuthContextType = {
   session: Session | null;
   user: User | null;
-  profile: any | null;
+  profile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateProfile: (data: any) => Promise<void>;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,7 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -65,7 +77,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Fix the from() call by explicitly typing it
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -74,11 +85,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
       if (error) {
         console.error('Error fetching profile:', error);
+        toast({
+          variant: "destructive",
+          title: "Profile Error",
+          description: "Failed to load your profile information. Please refresh and try again.",
+        });
       } else {
-        setProfile(profileData);
+        setProfile(profileData as UserProfile);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      toast({
+        variant: "destructive",
+        title: "Profile Error",
+        description: "Unexpected error while loading profile data.",
+      });
     }
   };
 
@@ -159,31 +180,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = async (data: any) => {
+  const updateProfile = async (data: Partial<UserProfile>) => {
     if (!user) return;
 
     try {
-      // Fix the from() call by explicitly typing it
       const { error } = await supabase
         .from('profiles')
         .update(data)
         .eq('id', user.id);
 
       if (error) {
+        toast({
+          variant: "destructive",
+          title: "Update failed",
+          description: error.message || "Failed to update profile information.",
+        });
         throw error;
       }
 
-      setProfile({ ...profile, ...data });
+      setProfile(prev => prev ? { ...prev, ...data } : null);
       
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
       });
     } catch (error: any) {
+      console.error('Error updating profile:', error);
       toast({
         variant: "destructive",
         title: "Update failed",
-        description: error.message,
+        description: error.message || "An unexpected error occurred while updating your profile.",
       });
     }
   };

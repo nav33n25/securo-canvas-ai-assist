@@ -1,4 +1,3 @@
-
 export interface PerplexityResponse {
   id: string;
   model: string;
@@ -37,7 +36,23 @@ export async function queryPerplexityAI(
     maxTokens = 1000 
   } = options;
   
+  // Validate inputs before making API call
+  if (!message.trim()) {
+    throw new Error('Message cannot be empty');
+  }
+  
+  if (!apiKey || apiKey.length < 10) {
+    throw new Error('Invalid API key');
+  }
+  
+  // Mask API key for logging (only show first 4 and last 4 chars)
+  const maskedKey = apiKey.length > 8 
+    ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`
+    : '********';
+  
   try {
+    console.log(`Querying Perplexity AI with model: ${model}, key: ${maskedKey}`);
+    
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
@@ -67,14 +82,39 @@ export async function queryPerplexityAI(
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to query Perplexity AI');
+      const errorText = await response.text();
+      let errorMessage = 'Failed to query Perplexity AI';
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (e) {
+        // If error response isn't valid JSON, use status text
+        errorMessage = `${response.status}: ${response.statusText || errorMessage}`;
+      }
+      
+      console.error('Perplexity API error:', {
+        status: response.status,
+        error: errorMessage
+      });
+      
+      throw new Error(errorMessage);
     }
     
-    return await response.json();
+    const data = await response.json();
+    
+    // Validate response structure
+    if (!data.choices || !Array.isArray(data.choices) || !data.choices.length) {
+      throw new Error('Invalid response from Perplexity AI');
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error querying Perplexity AI:', error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unexpected error when querying Perplexity AI');
   }
 }
 
@@ -85,4 +125,52 @@ export const SECURITY_PROMPTS = {
   threatAnalysis: "Please analyze the following security threat and provide mitigation strategies: ",
   complianceCheck: "Please check if the following practices comply with {framework} requirements: ",
   incidentResponse: "Help me create an incident response plan for: "
+};
+
+// Security utilities for API keys
+export const securityUtils = {
+  /**
+   * Securely store an API key in localStorage with encryption
+   * Note: This is still not 100% secure, but better than plain text
+   */
+  storeApiKey: (key: string, userId: string): void => {
+    if (!key || !userId) return;
+    
+    try {
+      // Simple obfuscation, not true encryption (would require a proper library)
+      const obfuscated = btoa(`${userId}:${key}:${Date.now()}`);
+      localStorage.setItem('pplx_api_key', obfuscated);
+    } catch (err) {
+      console.error('Failed to store API key');
+    }
+  },
+  
+  /**
+   * Retrieve a stored API key
+   */
+  getApiKey: (userId: string): string | null => {
+    try {
+      const stored = localStorage.getItem('pplx_api_key');
+      if (!stored) return null;
+      
+      const decoded = atob(stored);
+      const [storedUserId, key] = decoded.split(':');
+      
+      // Only return key if it matches the current user
+      if (storedUserId === userId) {
+        return key;
+      }
+      return null;
+    } catch (err) {
+      console.error('Failed to retrieve API key');
+      return null;
+    }
+  },
+  
+  /**
+   * Clear stored API key
+   */
+  clearApiKey: (): void => {
+    localStorage.removeItem('pplx_api_key');
+  }
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -33,10 +32,13 @@ const DocumentPage = () => {
   // Update document mutation
   const { mutate: saveDocument, isPending: isSaving } = useMutation({
     mutationFn: () => {
-      console.log('Saving document with content:', editorContent);
+      // Create a deep copy of the content to ensure we're not affected by references
+      const contentCopy = JSON.parse(JSON.stringify(editorContent));
+      
+      console.log('Saving document with deep copied content:', contentCopy);
       return updateDocument(id!, {
         title: documentTitle,
-        content: editorContent,
+        content: contentCopy,
       });
     },
     onSuccess: (data) => {
@@ -88,9 +90,14 @@ const DocumentPage = () => {
   // Handle content changes
   const handleContentChange = useCallback((newContent: Descendant[]) => {
     if (Array.isArray(newContent) && newContent.length > 0) {
-      console.log('Content changed');
-      setEditorContent(newContent);
+      console.log('Content changed in document page, length:', newContent.length);
+      
+      // Ensure we're setting a new reference to trigger state updates
+      const contentCopy = JSON.parse(JSON.stringify(newContent));
+      setEditorContent(contentCopy);
       setHasChanges(true);
+    } else {
+      console.error('Invalid content received from editor:', newContent);
     }
   }, []);
 
@@ -115,8 +122,24 @@ const DocumentPage = () => {
       return;
     }
 
+    // Log the content being saved
     console.log('Saving document, content length:', editorContent.length);
-    saveDocument();
+    console.log('Content sample:', editorContent[0]);
+    
+    try {
+      // Make sure we can stringify and parse the content before saving
+      const contentCopy = JSON.parse(JSON.stringify(editorContent));
+      
+      // Use mutate to save the document with the content copy
+      saveDocument();
+    } catch (err) {
+      console.error('Error preparing content for save:', err);
+      toast({
+        variant: "destructive",
+        title: "Save error",
+        description: "There was an error preparing your document for saving. Please try again.",
+      });
+    }
   }, [user, saveDocument, editorContent]);
   
   // Handle title change

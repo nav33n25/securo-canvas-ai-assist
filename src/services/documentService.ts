@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
@@ -56,6 +55,17 @@ export async function getDocument(id: string) {
   if (!data.content || !Array.isArray(data.content) || data.content.length === 0) {
     console.warn('Document had invalid content, setting default content');
     data.content = [{ type: 'paragraph', children: [{ text: '' }] }];
+  } else {
+    // Ensure content is properly parsed when retrieved
+    try {
+      // Convert to string and back to ensure we have proper JS objects
+      const contentString = JSON.stringify(data.content);
+      data.content = JSON.parse(contentString);
+      console.log('Retrieved and parsed document content:', data.content);
+    } catch (err) {
+      console.error('Error parsing document content:', err);
+      data.content = [{ type: 'paragraph', children: [{ text: '' }] }];
+    }
   }
   
   console.log('Retrieved document:', data);
@@ -90,8 +100,16 @@ export async function updateDocument(id: string, document: Partial<Document>) {
       document.content = [{ type: 'paragraph', children: [{ text: '' }] }];
     }
     
-    // Deep clone the content to ensure we're not affected by reference issues
-    document.content = JSON.parse(JSON.stringify(document.content));
+    // Ensure proper content serialization before saving
+    // Deep clone the content to prevent reference issues and ensure all slate nodes are properly serialized
+    try {
+      const contentString = JSON.stringify(document.content);
+      document.content = JSON.parse(contentString);
+      console.log('Content properly serialized for storage:', document.content);
+    } catch (err) {
+      console.error('Error serializing document content:', err);
+      throw new Error('Failed to serialize document content');
+    }
   }
   
   console.log('Updating document with content:', document.content);
