@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -178,7 +177,7 @@ const dashboardWidgets: DashboardWidget[] = [
     id: 'client_portal',
     title: 'Client Portal',
     description: 'Manage client relationships and deliverables',
-    icon: Link,
+    icon: LinkIcon,
     color: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
     link: '/clients',
     requiredRoles: ['individual', 'team_manager', 'administrator']
@@ -248,17 +247,21 @@ const Dashboard: React.FC = () => {
           
         if (error) throw error;
         
-        // Transform the data with proper typing
-        const transformedActivities: ActivityItem[] = (data as DocumentVersionResponse[] || []).map(item => ({
-          id: item.id,
-          type: 'document_updated', // Explicitly setting to one of the allowed literal types
-          document_id: item.document_id,
-          document_title: item.documents?.title || 'Untitled Document',
-          user_id: user.id,
-          user_name: `${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim(),
-          created_at: item.created_at,
-          content: item.change_summary || 'Updated document'
-        }));
+        const transformedActivities: ActivityItem[] = (data || []).map(item => {
+          const firstName = item.profiles && !('error' in item.profiles) ? item.profiles.first_name : '';
+          const lastName = item.profiles && !('error' in item.profiles) ? item.profiles.last_name : '';
+          
+          return {
+            id: item.id,
+            type: 'document_updated' as const,
+            document_id: item.document_id,
+            document_title: item.documents?.title || 'Untitled Document',
+            user_id: user.id,
+            user_name: `${firstName || ''} ${lastName || ''}`.trim(),
+            created_at: item.created_at,
+            content: item.change_summary || 'Updated document'
+          };
+        });
         
         setActivities(transformedActivities);
       } catch (error) {
