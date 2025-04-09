@@ -205,7 +205,7 @@ const Dashboard: React.FC = () => {
               typeof item.profiles === 'object' && 
               item.profiles !== null && 
               !('error' in item.profiles)) {
-            // Safely extract the first_name and last_name values
+            // Extract profile data with proper type assertion
             const profileData = item.profiles as { first_name?: string; last_name?: string };
             firstName = profileData.first_name || '';
             lastName = profileData.last_name || '';
