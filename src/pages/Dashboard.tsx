@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,7 @@ import {
   Compass,
   CheckCircle2,
   ArrowRight,
-  Link,
+  Link as LinkIcon,
   Sword,
   Radio,
   BarChart3,
@@ -56,6 +57,21 @@ interface ActivityItem {
   user_name?: string;
   created_at: string;
   content?: string;
+}
+
+// Types for Supabase query responses
+interface DocumentVersionResponse {
+  id: string;
+  created_at: string;
+  change_summary: string | null;
+  document_id: string;
+  documents: {
+    title: string | null;
+  } | null;
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
 }
 
 const dashboardWidgets: DashboardWidget[] = [
@@ -232,16 +248,17 @@ const Dashboard: React.FC = () => {
           
         if (error) throw error;
         
-        const transformedActivities = data?.map(item => ({
+        // Transform the data with proper typing
+        const transformedActivities: ActivityItem[] = (data as DocumentVersionResponse[] || []).map(item => ({
           id: item.id,
-          type: 'document_updated',
+          type: 'document_updated', // Explicitly setting to one of the allowed literal types
           document_id: item.document_id,
           document_title: item.documents?.title || 'Untitled Document',
           user_id: user.id,
           user_name: `${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`.trim(),
           created_at: item.created_at,
           content: item.change_summary || 'Updated document'
-        })) || [];
+        }));
         
         setActivities(transformedActivities);
       } catch (error) {
