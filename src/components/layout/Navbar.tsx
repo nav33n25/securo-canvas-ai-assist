@@ -40,6 +40,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type Notification = {
   id: string;
@@ -99,6 +100,7 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ onOpenCommandPalette }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, profile, signOut } = useAuth();
+  const isMobile = useIsMobile();
   
   const unreadNotifications = mockNotifications.filter(n => !n.read).length;
 
@@ -108,7 +110,7 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenCommandPalette }) => {
 
   return (
     <TooltipProvider>
-      <header className="border-b sticky top-0 z-30 bg-background px-4 py-3">
+      <header className="border-b sticky top-0 z-30 bg-background px-2 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <SidebarTrigger>
@@ -123,7 +125,7 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenCommandPalette }) => {
             </Link>
           </div>
           
-          <div className="hidden md:flex flex-1 px-8">
+          <div className="hidden md:flex flex-1 px-4 lg:px-8">
             <div className="max-w-md w-full mx-auto relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -144,15 +146,17 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenCommandPalette }) => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost" 
-              size="icon" 
-              className="relative md:hidden" 
-              onClick={onOpenCommandPalette}
-            >
-              <Command className="h-5 w-5" />
-            </Button>
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            {isMobile && (
+              <Button
+                variant="ghost" 
+                size="icon" 
+                className="relative" 
+                onClick={onOpenCommandPalette}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            )}
           
             <DropdownMenu>
               <Tooltip>
@@ -211,13 +215,13 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenCommandPalette }) => {
                 <TooltipContent>Notifications</TooltipContent>
               </Tooltip>
               
-              <SheetContent className="w-[400px] sm:w-[540px]">
+              <SheetContent className="w-full sm:w-[400px] md:w-[540px]">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium">Notifications</h3>
                   <Button variant="outline" size="sm">Mark all as read</Button>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-150px)]">
                   {mockNotifications.map(notification => (
                     <div 
                       key={notification.id} 
@@ -226,20 +230,20 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenCommandPalette }) => {
                       <div className="flex justify-between">
                         <div className="flex items-start gap-2">
                           {notification.type === 'alert' && (
-                            <div className="h-2 w-2 mt-2 rounded-full bg-red-500" />
+                            <div className="h-2 w-2 mt-2 rounded-full bg-red-500 flex-shrink-0" />
                           )}
                           {notification.type === 'info' && (
-                            <div className="h-2 w-2 mt-2 rounded-full bg-blue-500" />
+                            <div className="h-2 w-2 mt-2 rounded-full bg-blue-500 flex-shrink-0" />
                           )}
                           {notification.type === 'success' && (
-                            <div className="h-2 w-2 mt-2 rounded-full bg-green-500" />
+                            <div className="h-2 w-2 mt-2 rounded-full bg-green-500 flex-shrink-0" />
                           )}
                           <div>
                             <h4 className="text-sm font-medium">{notification.title}</h4>
                             <p className="text-sm text-muted-foreground">{notification.description}</p>
                           </div>
                         </div>
-                        <span className="text-xs text-muted-foreground">{notification.time}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{notification.time}</span>
                       </div>
                     </div>
                   ))}
@@ -247,22 +251,24 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenCommandPalette }) => {
               </SheetContent>
             </Sheet>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => toast({
-                    title: 'Help Center',
-                    description: 'The help center is currently being developed.',
-                  })}
-                >
-                  <HelpCircle className="h-5 w-5" />
-                  <span className="sr-only">Help Center</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Help Center</TooltipContent>
-            </Tooltip>
+            {!isMobile && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => toast({
+                      title: 'Help Center',
+                      description: 'The help center is currently being developed.',
+                    })}
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                    <span className="sr-only">Help Center</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Help Center</TooltipContent>
+              </Tooltip>
+            )}
 
             {user && (
               <DropdownMenu>

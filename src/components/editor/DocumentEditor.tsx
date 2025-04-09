@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Editor, Transforms, Element as SlateElement, Node } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -6,12 +7,11 @@ import Toolbar from './Toolbar';
 import { renderElement, renderLeaf } from './RenderElements';
 import { Card, CardContent } from '@/components/ui/card';
 import { withSecurityBlocks } from './withSecurityBlocks';
-import { Shield, Save, AlertTriangle, Clock } from 'lucide-react';
+import { Shield, Save, Clock } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
 import { toast } from '@/components/ui/use-toast';
 import { CustomElement, CustomText } from '@/types/slate';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DocumentEditorProps {
   initialValue: Descendant[];
@@ -63,7 +63,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
   
   const [value, setValue] = useState<Descendant[]>(defaultValue);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const [securityScore, setSecurityScore] = useState<number>(0);
   const previousValueRef = useRef<string>(JSON.stringify(defaultValue));
   const contentChangeTimeoutRef = useRef<number | null>(null);
   const isInitialRender = useRef<boolean>(true);
@@ -89,7 +88,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
         // Update the React state
         setValue([...initialValue]);
         previousValueRef.current = JSON.stringify(initialValue);
-        calculateSecurityScore(initialValue);
         isInitialRender.current = false;
         
         console.log('Editor content set successfully to:', initialValue);
@@ -109,91 +107,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       setValue([...emptyEditorContent]);
     }
   }, [initialValue, editor]);
-
-  // Calculate a more robust security score based on document content
-  const calculateSecurityScore = useCallback((content: Descendant[]) => {
-    if (!Array.isArray(content) || content.length === 0) return 0;
-    
-    let score = 0;
-    const totalBlocks = content.length;
-    const totalLength = JSON.stringify(content).length;
-    let securityBlocks = 0;
-    
-    // Security categories with weights
-    const securityCategories = {
-      securityNote: { weight: 8, count: 0 },
-      vulnerability: { weight: 10, count: 0 },
-      compliance: { weight: 12, count: 0 },
-      warning: { weight: 6, count: 0 },
-      control: { weight: 10, count: 0 },
-    };
-    
-    // Security keywords with weights
-    const securityKeywords = {
-      'security': 2,
-      'vulnerability': 3,
-      'risk': 2,
-      'threat': 3,
-      'compliance': 2,
-      'policy': 2,
-      'control': 2,
-      'mitigation': 4,
-      'encryption': 5,
-      'authentication': 4,
-      'authorization': 4,
-      'audit': 3,
-      'protect': 1,
-      'defense': 2,
-      'incident': 3,
-      'response': 1,
-      'firewall': 2,
-      'monitoring': 2,
-      'patch': 3,
-    };
-    
-    // Count security-specific blocks
-    content.forEach(node => {
-      const type = (node as CustomElement).type;
-      if (type === 'security-note') securityCategories.securityNote.count++;
-      if (type === 'vulnerability') securityCategories.vulnerability.count++;
-      if (type === 'compliance') securityCategories.compliance.count++;
-      if (type === 'warning') securityCategories.warning.count++;
-      if (type === 'control') securityCategories.control.count++;
-      
-      // Check for security keywords in text content
-      const textContent = JSON.stringify(node).toLowerCase();
-      Object.entries(securityKeywords).forEach(([keyword, weight]) => {
-        // Count occurrences of each keyword
-        const matches = textContent.match(new RegExp(keyword.toLowerCase(), 'g'));
-        if (matches) {
-          // Cap the score contribution per keyword to prevent keyword stuffing
-          const occurrences = Math.min(matches.length, 5);
-          score += occurrences * weight;
-        }
-      });
-    });
-    
-    // Add scores for security blocks with diminishing returns
-    Object.entries(securityCategories).forEach(([category, data]) => {
-      securityBlocks += data.count;
-      // Apply diminishing returns to prevent gaming the score with excess blocks
-      score += Math.min(data.count, 10) * data.weight;
-    });
-    
-    // Add points for document complexity based on length with a cap
-    const lengthScore = Math.min(totalLength / 500, 15);
-    score += lengthScore;
-    
-    // Add points for document structure (variety of block types)
-    const uniqueBlockTypes = new Set(content.map(node => (node as CustomElement).type)).size;
-    score += uniqueBlockTypes * 3;
-    
-    // Normalize the score to a 0-100 scale
-    const normalizedScore = Math.min(Math.round(score), 100);
-    setSecurityScore(normalizedScore);
-    
-    return normalizedScore;
-  }, []);
 
   // Normalize slate content to ensure it's valid
   const normalizeSlateContent = useCallback((content: any[]): Descendant[] => {
@@ -262,10 +175,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
         console.log('Content changed, notifying parent, length:', normalizedContent.length);
         previousValueRef.current = contentString;
         onChange(normalizedContent);
-        calculateSecurityScore(normalizedContent);
       }
     }, 300);
-  }, [onChange, calculateSecurityScore, normalizeSlateContent]);
+  }, [onChange, normalizeSlateContent]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -302,7 +214,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       <div className="flex justify-between items-center flex-wrap gap-2">
         <div className="flex items-center gap-2 text-secure">
           <Shield className="h-6 w-6" />
-          <h1 className="text-2xl font-semibold">{title}</h1>
+          <h1 className="text-2xl font-semibold truncate max-w-[200px] sm:max-w-xs md:max-w-md">{title}</h1>
         </div>
         
         <div className="flex gap-2 items-center flex-wrap">
@@ -312,20 +224,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
               Last saved: {lastSaved.toLocaleTimeString()}
             </div>
           )}
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 bg-slate-800 px-3 py-1 rounded-full">
-                  <AlertTriangle className={`h-4 w-4 ${securityScore > 70 ? 'text-green-500' : securityScore > 40 ? 'text-yellow-500' : 'text-red-500'}`} />
-                  <span className="text-sm">Security Score: {securityScore}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="max-w-xs">Security Score evaluates your document's security content quality. Higher scores indicate better security documentation with appropriate security blocks, terminology, and structure.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           
           <Button 
             onClick={handleSave}
@@ -353,7 +251,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
           <div className="flex flex-col lg:flex-row gap-4 h-full">
             <div className={`flex-1 ${showAIAssistant ? 'lg:w-2/3' : 'w-full'}`}>
               <Toolbar editor={editor} onToggleAI={toggleAIAssistant} showAI={showAIAssistant} />
-              <div className="border border-slate-700 rounded-md p-4 mt-2 min-h-[500px] slate-content bg-slate-900 shadow-inner">
+              <div className="border border-slate-700 rounded-md p-2 sm:p-4 mt-2 min-h-[300px] sm:min-h-[400px] md:min-h-[500px] slate-content bg-slate-900 shadow-inner">
                 <Slate 
                   editor={editor} 
                   initialValue={value}
@@ -366,7 +264,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
                     placeholder="Create your security documentation here..."
                     spellCheck
                     autoFocus
-                    className="min-h-[500px] focus:outline-none text-slate-100"
+                    className="min-h-[300px] sm:min-h-[400px] md:min-h-[500px] focus:outline-none text-slate-100"
                   />
                 </Slate>
               </div>

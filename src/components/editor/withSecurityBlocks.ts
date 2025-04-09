@@ -51,6 +51,21 @@ export const withSecurityBlocks = (editor: Editor): Editor => {
           { at: [...path, 0] }
         );
       }
+      
+      // Add necessary styling attributes if not present
+      if (!(node as any).className) {
+        const className = 
+          (node as any).type === 'security-note' ? 'security-border p-3 rounded-md my-2' :
+          (node as any).type === 'vulnerability' ? 'threat-border p-3 rounded-md my-2' :
+          (node as any).type === 'compliance' ? 'safe-border p-3 rounded-md my-2' :
+          (node as any).type === 'warning' ? 'warning-border p-3 rounded-md my-2' : '';
+        
+        Transforms.setNodes(
+          editor,
+          { className },
+          { at: path }
+        );
+      }
     }
     
     normalizeNode([node, path]);

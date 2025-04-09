@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -288,8 +289,6 @@ const DocumentPage = () => {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
-          
-          {/* Save button moved to DocumentEditor to avoid duplication */}
         </div>
         
         {isLoading ? (
@@ -306,7 +305,7 @@ const DocumentPage = () => {
                 type="text"
                 value={documentTitle}
                 onChange={handleTitleChange}
-                className="text-xl font-semibold bg-transparent border-none focus:outline-none focus:ring-0 w-full"
+                className="text-xl font-semibold bg-transparent border-none focus:outline-none focus:ring-0 w-full max-w-full"
                 placeholder="Document Title"
               />
             </div>
