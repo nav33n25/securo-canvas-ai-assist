@@ -1,0 +1,127 @@
+import React from 'react';
+import { UserRole, useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Shield, Users, PersonStanding, UserCog, LucideIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+interface RoleCardProps {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  role: UserRole;
+  onSelect: (role: UserRole) => void;
+  isSelected: boolean;
+}
+
+const RoleCard: React.FC<RoleCardProps> = ({ 
+  title, 
+  description, 
+  icon, 
+  role, 
+  onSelect,
+  isSelected
+}) => (
+  <Card 
+    className={`cursor-pointer transition-all hover:shadow-md ${
+      isSelected ? 'ring-2 ring-secure bg-secure/5' : ''
+    }`}
+    onClick={() => onSelect(role)}
+  >
+    <CardContent className="p-4 flex flex-col items-center text-center">
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
+        isSelected ? 'bg-secure text-white' : 'bg-muted'
+      }`}>
+        {icon}
+      </div>
+      <h3 className="font-medium text-lg mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </CardContent>
+  </Card>
+);
+
+const RoleSelection: React.FC = () => {
+  const { setUserRole, role: currentRole } = useAuth();
+  const [selectedRole, setSelectedRole] = React.useState<UserRole | null>(currentRole);
+  const navigate = useNavigate();
+
+  const roles: {
+    title: string;
+    description: string;
+    icon: React.ReactNode;
+    role: UserRole;
+  }[] = [
+    {
+      title: 'Individual',
+      description: 'Students, bug bounty hunters, independent consultants',
+      icon: <PersonStanding className="h-6 w-6" />,
+      role: 'individual'
+    },
+    {
+      title: 'Team Member',
+      description: 'Security professionals working within organizations',
+      icon: <Users className="h-6 w-6" />,
+      role: 'team_member'
+    },
+    {
+      title: 'Team Manager',
+      description: 'Security team leaders, CISO, security managers',
+      icon: <Shield className="h-6 w-6" />,
+      role: 'team_manager'
+    },
+    {
+      title: 'Administrator',
+      description: 'Platform administrators managing the instance',
+      icon: <UserCog className="h-6 w-6" />,
+      role: 'administrator'
+    }
+  ];
+
+  const handleRoleSelect = (role: UserRole) => {
+    setSelectedRole(role);
+  };
+
+  const handleContinue = async () => {
+    if (!selectedRole) return;
+    
+    await setUserRole(selectedRole);
+    navigate('/dashboard');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-4">
+        <h2 className="text-2xl font-bold mb-2">Select Your Role</h2>
+        <p className="text-muted-foreground">
+          Choose the role that best describes your security work
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {roles.map((roleOption) => (
+          <RoleCard
+            key={roleOption.role}
+            title={roleOption.title}
+            description={roleOption.description}
+            icon={roleOption.icon}
+            role={roleOption.role}
+            onSelect={handleRoleSelect}
+            isSelected={selectedRole === roleOption.role}
+          />
+        ))}
+      </div>
+
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleContinue}
+          disabled={!selectedRole}
+          className="px-6"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default RoleSelection; 

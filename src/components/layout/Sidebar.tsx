@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -33,7 +32,12 @@ import {
   ChevronUp,
   Building,
   User,
-  Globe
+  Globe,
+  Sparkles,
+  GraduationCap,
+  Bug,
+  HardDrive,
+  ExternalLink
 } from 'lucide-react';
 import {
   Sidebar as SidebarContainer,
@@ -59,6 +63,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 
 type Workspace = {
   id: string;
@@ -86,15 +91,18 @@ const recentPages = [
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const { role } = useAuth();
   const [currentWorkspace, setCurrentWorkspace] = useState(workspaces[0].id);
   const [expandedSections, setExpandedSections] = useState({
     favorites: true,
     recent: true,
-    team: false
+    team: false,
+    extensions: false,
+    specialized: false
   });
   
   const isActive = (path: string) => {
-    return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
   
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -102,6 +110,17 @@ const Sidebar: React.FC = () => {
       ...prev,
       [section]: !prev[section]
     }));
+  };
+
+  // Check if user has access to specific features based on role
+  const hasAccess = (requiredRoles: UserRole[]) => {
+    if (!role) return false;
+    
+    // Administrator can access everything
+    if (role === 'administrator') return true;
+    
+    // Check if user's role is in the required roles
+    return requiredRoles.includes(role);
   };
 
   return (
@@ -133,6 +152,7 @@ const Sidebar: React.FC = () => {
       </SidebarHeader>
       
       <SidebarContent>
+        {/* Core Pages - Available to all users */}
         <SidebarGroup>
           <SidebarGroupLabel>Core</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -146,7 +166,7 @@ const Sidebar: React.FC = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/documents') || location.pathname.startsWith('/document')}>
+                <SidebarMenuButton asChild isActive={isActive('/documents') || location.pathname.startsWith('/document/')}>
                   <Link to="/documents">
                     <FileText />
                     <span>Documents</span>
@@ -173,6 +193,151 @@ const Sidebar: React.FC = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         
+        {/* Extension Modules - Role-based access */}
+        <SidebarGroup>
+          <div className="flex justify-between items-center">
+            <SidebarGroupLabel>Extension Modules</SidebarGroupLabel>
+            <SidebarGroupAction onClick={() => toggleSection('extensions')}>
+              {expandedSections.extensions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </SidebarGroupAction>
+          </div>
+          {expandedSections.extensions && (
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {/* Asset Management - Team Member+ */}
+                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/assets')}>
+                      <Link to="/assets">
+                        <HardDrive />
+                        <span>Asset Management</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                
+                {/* Intelligence - Team Member+ */}
+                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/threat-intel')}>
+                      <Link to="/threat-intel">
+                        <Globe />
+                        <span>Intelligence</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                
+                {/* Compliance - Team Member+ */}
+                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/compliance')}>
+                      <Link to="/compliance">
+                        <ClipboardCheck />
+                        <span>Compliance</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                
+                {/* Ticketing - Team Member+ */}
+                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/ticketing')}>
+                      <Link to="/ticketing">
+                        <Ticket />
+                        <span>Ticketing</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                
+                {/* AI Assistant - All users */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/ai-config')}>
+                    <Link to="/ai-config">
+                      <Sparkles />
+                      <span>AI Assistant</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
+        </SidebarGroup>
+        
+        {/* Specialized Views */}
+        <SidebarGroup>
+          <div className="flex justify-between items-center">
+            <SidebarGroupLabel>Specialized Views</SidebarGroupLabel>
+            <SidebarGroupAction onClick={() => toggleSection('specialized')}>
+              {expandedSections.specialized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </SidebarGroupAction>
+          </div>
+          {expandedSections.specialized && (
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {/* Bug Bounty - All users */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/bug-bounty')}>
+                    <Link to="/bug-bounty">
+                      <Bug />
+                      <span>Bug Bounty</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                
+                {/* Red Team Ops - Team Member+ */}
+                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/red-team')}>
+                      <Link to="/red-team">
+                        <Sword />
+                        <span>Red Team Ops</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                
+                {/* Blue Team Ops/SOC - Team Member+ */}
+                {hasAccess(['team_member', 'team_manager', 'administrator']) && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/soc')}>
+                      <Link to="/soc">
+                        <MonitorSmartphone />
+                        <span>Blue Team Ops</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                
+                {/* Learning Hub - All users */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/learning')}>
+                    <Link to="/learning">
+                      <GraduationCap />
+                      <span>Learning Hub</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                
+                {/* Client Portal - Individual and Team Manager+ */}
+                {hasAccess(['individual', 'team_manager', 'administrator']) && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/clients')}>
+                      <Link to="/clients">
+                        <ExternalLink />
+                        <span>Client Portal</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
+        </SidebarGroup>
+        
+        {/* Favorites and Recent sections remain the same */}
         <SidebarGroup>
           <div className="flex justify-between items-center">
             <SidebarGroupLabel>Favorites</SidebarGroupLabel>
@@ -231,191 +396,35 @@ const Sidebar: React.FC = () => {
           )}
         </SidebarGroup>
         
-        <SidebarGroup>
-          <SidebarGroupLabel>Security Operations</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/soc')}>
-                  <Link to="/soc">
-                    <MonitorSmartphone />
-                    <span>SOC</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/assets')}>
-                  <Link to="/assets">
-                    <Database />
-                    <span>Assets</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/compliance')}>
-                  <Link to="/compliance">
-                    <CheckSquare />
-                    <span>Compliance</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/ticketing')}>
-                  <Link to="/ticketing">
-                    <Ticket />
-                    <span>Security Tickets</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Intelligence</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/red-team')}>
-                  <Link to="/red-team">
-                    <Sword />
-                    <span>Red Team</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/threat-intel')}>
-                  <Link to="/threat-intel">
-                    <Radio />
-                    <span>Threat Intel</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <div className="flex justify-between items-center">
-            <SidebarGroupLabel>Team</SidebarGroupLabel>
-            <SidebarGroupAction onClick={() => toggleSection('team')}>
-              {expandedSections.team ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </SidebarGroupAction>
-          </div>
-          {expandedSections.team && (
+        {/* Admin settings - Only for Administrators */}
+        {hasAccess(['administrator']) && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administration</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback>AS</AvatarFallback>
-                      </Avatar>
-                      <span>Alex Smith</span>
-                    </div>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback>JD</AvatarFallback>
-                      </Avatar>
-                      <span>Jane Doe</span>
-                    </div>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback>MP</AvatarFallback>
-                      </Avatar>
-                      <span>Mike Peterson</span>
-                    </div>
+                  <SidebarMenuButton asChild isActive={isActive('/workspace-settings')}>
+                    <Link to="/workspace-settings">
+                      <Settings />
+                      <span>Workspace Settings</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
-          )}
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Professional</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/learning')}>
-                  <Link to="/learning">
-                    <BookOpen />
-                    <span>Learning Hub</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/bug-bounty')}>
-                  <Link to="/bug-bounty">
-                    <Target />
-                    <span>Bug Bounty</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/clients')}>
-                  <Link to="/clients">
-                    <Briefcase />
-                    <span>Client Portal</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        
-        <SidebarGroup>
-          <SidebarGroupLabel>Administration</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/workspace-settings')}>
-                  <Link to="/workspace-settings">
-                    <Cog />
-                    <span>Workspace Settings</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/ai-config')}>
-                  <Link to="/ai-config">
-                    <Bot />
-                    <span>AI Configuration</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/profile')}>
-              <Link to="/profile">
-                <Users />
-                <span>Profile</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/settings')}>
-              <Link to="/settings">
-                <Settings />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="px-3 py-2">
+          <Link to="/profile">
+            <Button variant="outline" className="w-full justify-start">
+              <User className="h-4 w-4 mr-2" />
+              Profile
+            </Button>
+          </Link>
+        </div>
       </SidebarFooter>
     </SidebarContainer>
   );

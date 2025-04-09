@@ -1,9 +1,11 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+
+// Define user role types based on platform structure
+export type UserRole = 'individual' | 'team_member' | 'team_manager' | 'administrator';
 
 // Define a proper interface for the user profile
 interface UserProfile {
@@ -13,7 +15,7 @@ interface UserProfile {
   email?: string; // Making email optional since it might come from user object
   avatar_url?: string | null;
   job_title?: string | null;
-  role?: string;
+  role?: UserRole;
   organization_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -24,18 +26,30 @@ type AuthContextType = {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  role: UserRole | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, role?: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  setUserRole: (role: UserRole) => Promise<void>;
+  hasPermission: (requiredRoles: UserRole[]) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Define role hierarchy for permission checks
+const roleHierarchy: Record<UserRole, number> = {
+  'individual': 1,
+  'team_member': 2,
+  'team_manager': 3,
+  'administrator': 4
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -53,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }, 0);
         } else {
           setProfile(null);
+          setRole(null);
         }
         
         if (event === 'SIGNED_OUT') {
@@ -101,8 +116,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: data.user.email
             };
             setProfile(profileWithEmail);
+            
+            // Set user role from profile
+            if (profileWithEmail.role) {
+              setRole(profileWithEmail.role as UserRole);
+            } else {
+              // Default to individual if no role is set
+              setRole('individual');
+            }
           } else {
             setProfile(profileData as UserProfile);
+            
+            // Set user role from profile
+            if (profileData.role) {
+              setRole(profileData.role as UserRole);
+            } else {
+              // Default to individual if no role is set
+              setRole('individual');
+            }
           }
         });
       }
@@ -141,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, role: UserRole = 'individual') => {
     try {
       const { data, error } = await supabase.auth.signUp({ 
         email, 
@@ -149,7 +180,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             first_name: firstName,
-            last_name: lastName
+            last_name: lastName,
+            role: role
           }
         }
       });
@@ -161,6 +193,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           description: error.message,
         });
       } else {
+        // Create profile record
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              first_name: firstName,
+              last_name: lastName,
+              role: role
+            });
+            
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+          }
+        }
+        
         toast({
           title: "Registration successful",
           description: "Please check your email for confirmation.",
@@ -189,6 +237,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Signed out",
         description: "You have successfully signed out.",
       });
+      setRole(null);
       navigate('/auth');
     }
   };
@@ -211,7 +260,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      setProfile(prev => prev ? { ...prev, ...data } : null);
+      const updatedProfile = prev => {
+        if (!prev) return null;
+        const newProfile = { ...prev, ...data };
+        
+        // Update role state if role was changed
+        if (data.role && data.role !== role) {
+          setRole(data.role);
+        }
+        
+        return newProfile;
+      };
+      
+      setProfile(updatedProfile);
       
       toast({
         title: "Profile updated",
@@ -226,16 +287,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     }
   };
+  
+  const setUserRole = async (newRole: UserRole) => {
+    if (!user) return;
+    
+    try {
+      // Update the role in the database
+      await updateProfile({ role: newRole });
+      
+      // Set the role in state
+      setRole(newRole);
+      
+      toast({
+        title: "Role Updated",
+        description: `Your role has been updated to ${newRole.replace('_', ' ')}.`,
+      });
+      
+      // Redirect to the dashboard to refresh the view
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error setting user role:', error);
+    }
+  };
+  
+  // Check if user has permission based on their role
+  const hasPermission = (requiredRoles: UserRole[]): boolean => {
+    if (!role) return false;
+    
+    // If required roles array is empty, allow access
+    if (requiredRoles.length === 0) return true;
+    
+    // Check if user's role is in the required roles
+    return requiredRoles.some(requiredRole => {
+      // Direct role match
+      if (role === requiredRole) return true;
+      
+      // Administrator has access to everything
+      if (role === 'administrator') return true;
+      
+      // Check role hierarchy - higher roles have access to lower role features
+      return roleHierarchy[role] >= roleHierarchy[requiredRole];
+    });
+  };
 
   const value = {
     session,
     user,
     profile,
     loading,
+    role,
     signIn,
     signUp,
     signOut,
     updateProfile,
+    setUserRole,
+    hasPermission
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
