@@ -31,6 +31,7 @@ const DocumentPage = () => {
     queryFn: () => getDocument(id!),
     enabled: !!id && !!user,
     retry: 1,
+    staleTime: 1000 * 60, // 1 minute
   });
 
   // Update document mutation
@@ -94,15 +95,18 @@ const DocumentPage = () => {
         version: document.version
       });
       
-      setDocumentTitle(document.title);
+      setDocumentTitle(document.title || "Untitled Document");
       
       // Ensure document content is valid
       if (Array.isArray(document.content) && document.content.length > 0) {
-        console.log('Setting editor content:', 
+        console.log('Setting editor content from document:', 
           document.content.slice(0, 2), 
           `(${document.content.length} nodes total)`
         );
-        setEditorContent(document.content);
+        
+        // Make a deep copy to avoid reference issues
+        const contentCopy = JSON.parse(JSON.stringify(document.content));
+        setEditorContent(contentCopy);
       } else {
         // Set default content if the document content is invalid
         console.warn('Invalid document content, setting default');
@@ -152,7 +156,7 @@ const DocumentPage = () => {
 
   // Handle content changes
   const handleContentChange = useCallback((newContent: Descendant[]) => {
-    console.log('Content changed in document page');
+    console.log('Content changed in document page, length:', newContent.length);
     
     if (!Array.isArray(newContent)) {
       console.error('Received non-array content:', newContent);
@@ -164,14 +168,27 @@ const DocumentPage = () => {
       newContent = [{ type: 'paragraph', children: [{ text: '' }] }];
     }
     
-    console.log('Setting editor content with length:', newContent.length);
+    // Log first couple of nodes for debugging
+    if (newContent.length > 0) {
+      console.log('First node:', JSON.stringify(newContent[0]));
+    }
     
-    // Ensure we're setting a new reference to trigger state updates
-    setEditorContent([...newContent]);
-    setHasChanges(true);
-    
-    // Reset auto-save timer
-    setupAutoSave();
+    // Create a deep copy to ensure we break references
+    try {
+      const contentCopy = JSON.parse(JSON.stringify(newContent));
+      setEditorContent(contentCopy);
+      setHasChanges(true);
+      
+      // Reset auto-save timer
+      setupAutoSave();
+    } catch (err) {
+      console.error('Error processing content change:', err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was a problem updating the document content.",
+      });
+    }
   }, [setupAutoSave]);
 
   // Handle saving the document

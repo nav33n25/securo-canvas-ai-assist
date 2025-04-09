@@ -38,6 +38,11 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
 }) => {
   console.log('DocumentEditor render with initialValue length:', 
     Array.isArray(initialValue) ? initialValue.length : 'not an array');
+  
+  if (Array.isArray(initialValue) && initialValue.length > 0) {
+    console.log('First node type:', (initialValue[0] as any).type);
+    console.log('First node children:', (initialValue[0] as any).children);
+  }
 
   // Use initialValue from props, but fallback to empty content if it's empty or invalid
   const defaultValue = useMemo(() => {
@@ -62,9 +67,12 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const previousValueRef = useRef<string>(JSON.stringify(defaultValue));
   const contentChangeTimeoutRef = useRef<number | null>(null);
   const isInitialRender = useRef<boolean>(true);
+  const editorRef = useRef<Editor | null>(null);
   
   const editor = useMemo(() => {
-    return withSecurityBlocks(withHistory(withReact(createEditor())));
+    const e = withSecurityBlocks(withHistory(withReact(createEditor())));
+    editorRef.current = e;
+    return e;
   }, []);
 
   // If initialValue changes (e.g., when document is loaded), update the editor
@@ -73,10 +81,18 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
       // Additional validation to ensure content conforms to expected types
       try {
         console.log('Updating editor content from new initialValue, length:', initialValue.length);
-        setValue(initialValue);
+        
+        // Reset the editor to clear any existing content
+        editor.children = initialValue;
+        editor.selection = { anchor: { path: [0, 0], offset: 0 }, focus: { path: [0, 0], offset: 0 } };
+        
+        // Update the React state
+        setValue([...initialValue]);
         previousValueRef.current = JSON.stringify(initialValue);
         calculateSecurityScore(initialValue);
         isInitialRender.current = false;
+        
+        console.log('Editor content set successfully to:', initialValue);
       } catch (error) {
         console.error('Error setting editor value:', error);
         toast({
@@ -84,12 +100,15 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
           title: "Editor Error",
           description: "There was an issue loading the document content.",
         });
+        
+        // Set to empty content if there was an error
+        setValue([...emptyEditorContent]);
       }
     } else {
       console.warn('Received invalid initialValue, using empty content');
-      setValue(emptyEditorContent);
+      setValue([...emptyEditorContent]);
     }
-  }, [initialValue]);
+  }, [initialValue, editor]);
 
   // Calculate a more robust security score based on document content
   const calculateSecurityScore = useCallback((content: Descendant[]) => {
@@ -330,6 +349,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
                   editor={editor} 
                   initialValue={value}
                   onChange={handleChange}
+                  key={`editor-${title}-${value.length}`} // Force recreation on major changes
                 >
                   <Editable
                     renderElement={renderElement}

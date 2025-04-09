@@ -59,22 +59,54 @@ export async function getDocument(id: string) {
     throw new Error('Document not found');
   }
 
-  console.log('Raw document content from database:', data.content);
+  console.log('Raw document content from database:', data);
+  console.log('Content type:', typeof data.content);
   
-  // Ensure we have valid content structure using our sanitize function
-  const content = data.content as unknown as CustomElement[];
-  data.content = sanitizeContent(content);
-  
-  console.log('Document after sanitization:', {
-    id: data.id,
-    title: data.title,
-    contentLength: Array.isArray(data.content) ? data.content.length : 0,
-    version: data.version,
-    firstNodeType: Array.isArray(data.content) && data.content.length > 0 ? 
-      (data.content[0] as CustomElement).type : 'none'
-  });
-  
-  return data as Document;
+  try {
+    // Convert content to CustomElement[] and sanitize
+    let contentArray: CustomElement[];
+    
+    // Handle content appropriately based on its format
+    if (typeof data.content === 'string') {
+      try {
+        // If it's a string, try to parse it as JSON
+        contentArray = JSON.parse(data.content) as CustomElement[];
+      } catch (e) {
+        console.error('Failed to parse content string as JSON:', e);
+        contentArray = [{ type: 'paragraph', children: [{ text: '' }] }];
+      }
+    } else if (Array.isArray(data.content)) {
+      // If it's already an array, use it directly
+      contentArray = data.content as unknown as CustomElement[];
+    } else {
+      // If it's neither a string nor an array, create default content
+      console.warn('Content is neither string nor array:', data.content);
+      contentArray = [{ type: 'paragraph', children: [{ text: '' }] }];
+    }
+    
+    // Sanitize the content
+    const sanitizedContent = sanitizeContent(contentArray);
+    data.content = sanitizedContent;
+    
+    console.log('Document content structure after processing:', 
+      Array.isArray(data.content) ? 
+        `Array with ${data.content.length} elements` : 
+        `Not an array: ${typeof data.content}`
+    );
+    
+    if (data.content.length > 0) {
+      console.log('First element type:', (data.content[0] as any).type);
+    }
+    
+    return data as Document;
+  } catch (error) {
+    console.error('Error processing document content:', error);
+    // Return document with default content
+    return {
+      ...data,
+      content: [{ type: 'paragraph', children: [{ text: '' }] }]
+    } as Document;
+  }
 }
 
 export async function createDocument(document: Omit<Partial<Document>, 'title'> & { title: string }) {
