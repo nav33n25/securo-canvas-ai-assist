@@ -279,6 +279,39 @@ const Sidebar: React.FC = () => {
     };
   }).filter(section => section.visible);
 
+  // Fallback menu items for core section if filtered items are empty
+  const coreMenuItems = [
+    {
+      title: "Dashboard",
+      icon: "dashboard",
+      path: "/dashboard",
+      iconComponent: Layout
+    },
+    {
+      title: "Documents",
+      icon: "documents",
+      path: "/documents",
+      iconComponent: FileText
+    }
+  ];
+
+  // Get items safely using optional chaining and nullish coalescing
+  const getCoreItems = () => {
+    return filteredMenuItems[0]?.items || coreMenuItems;
+  };
+
+  const getExtensionItems = () => {
+    return filteredMenuItems[1]?.items || [];
+  };
+
+  const getSpecializedItems = () => {
+    return filteredMenuItems[2]?.items || [];
+  };
+
+  const getAdminItems = () => {
+    return filteredMenuItems[3]?.items || [];
+  };
+
   return (
     <SidebarContainer>
       <SidebarHeader className="flex flex-col gap-3 px-3 py-2">
@@ -313,7 +346,7 @@ const Sidebar: React.FC = () => {
           <SidebarGroupLabel>Core</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredMenuItems[0].items.map((item) => (
+              {getCoreItems().map((item) => (
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton asChild isActive={isActive(item.path)}>
                     <Link to={item.path}>
@@ -328,56 +361,60 @@ const Sidebar: React.FC = () => {
         </SidebarGroup>
         
         {/* Extension Modules - Role-based access */}
-        <SidebarGroup>
-          <div className="flex justify-between items-center">
-            <SidebarGroupLabel>Extension Modules</SidebarGroupLabel>
-            <SidebarGroupAction onClick={() => toggleSection('extensions')}>
-              {expandedSections.extensions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </SidebarGroupAction>
-          </div>
-          {expandedSections.extensions && (
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredMenuItems[1].items.map((item) => (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton asChild isActive={isActive(item.path)}>
-                      <Link to={item.path}>
-                        <item.iconComponent className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          )}
-        </SidebarGroup>
+        {getExtensionItems().length > 0 && (
+          <SidebarGroup>
+            <div className="flex justify-between items-center">
+              <SidebarGroupLabel>Extension Modules</SidebarGroupLabel>
+              <SidebarGroupAction onClick={() => toggleSection('extensions')}>
+                {expandedSections.extensions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </SidebarGroupAction>
+            </div>
+            {expandedSections.extensions && (
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {getExtensionItems().map((item) => (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton asChild isActive={isActive(item.path)}>
+                        <Link to={item.path}>
+                          <item.iconComponent className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
+          </SidebarGroup>
+        )}
         
         {/* Specialized Views */}
-        <SidebarGroup>
-          <div className="flex justify-between items-center">
-            <SidebarGroupLabel>Specialized Views</SidebarGroupLabel>
-            <SidebarGroupAction onClick={() => toggleSection('specialized')}>
-              {expandedSections.specialized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </SidebarGroupAction>
-          </div>
-          {expandedSections.specialized && (
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredMenuItems[2].items.map((item) => (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton asChild isActive={isActive(item.path)}>
-                      <Link to={item.path}>
-                        <item.iconComponent className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          )}
-        </SidebarGroup>
+        {getSpecializedItems().length > 0 && (
+          <SidebarGroup>
+            <div className="flex justify-between items-center">
+              <SidebarGroupLabel>Specialized Views</SidebarGroupLabel>
+              <SidebarGroupAction onClick={() => toggleSection('specialized')}>
+                {expandedSections.specialized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </SidebarGroupAction>
+            </div>
+            {expandedSections.specialized && (
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {getSpecializedItems().map((item) => (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton asChild isActive={isActive(item.path)}>
+                        <Link to={item.path}>
+                          <item.iconComponent className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
+          </SidebarGroup>
+        )}
         
         {/* Favorites and Recent sections remain the same */}
         <SidebarGroup>
@@ -439,7 +476,7 @@ const Sidebar: React.FC = () => {
         </SidebarGroup>
         
         {/* Admin settings - Only for Administrators */}
-        {filteredMenuItems[3].items.map((item) => (
+        {getAdminItems().map((item) => (
           <SidebarGroup key={item.path}>
             <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
             <SidebarGroupContent>

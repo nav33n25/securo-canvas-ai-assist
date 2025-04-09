@@ -51,6 +51,22 @@ const ProtectedRoute = ({ children, requiredRoles = [] }: ProtectedRouteProps) =
     return <Navigate to="/auth" replace />;
   }
 
+  // Additional check: if roles are required but we don't have a role yet
+  if (requiredRoles.length > 0 && !role) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          transition={{ duration: 0.3 }}
+          className="flex flex-col items-center"
+        >
+          <p className="text-lg font-medium text-muted-foreground">Verifying permissions...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (requiredRoles.length > 0 && !hasPermission(requiredRoles)) {
     return (
       <motion.div
