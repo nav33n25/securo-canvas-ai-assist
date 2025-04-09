@@ -29,7 +29,7 @@ export const Link = ({ href, children, ...props }: { href: string, children: Rea
 };
 
 // Next Navigation compatibility
-export const useParams = <T extends Record<string, string>>() => {
+export const useParams = <T extends Record<string, string>>(): T => {
   const path = window.location.pathname;
   const segments = path.split('/').filter(Boolean);
   
