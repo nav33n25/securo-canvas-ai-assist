@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -91,7 +90,6 @@ const recentPages = [
   { name: 'Asset Inventory', path: '/assets', icon: Database, iconComponent: Database },
 ];
 
-// Add icon mapping for menu items
 const iconMap: Record<string, React.ComponentType<any>> = {
   dashboard: Layout,
   documents: FileText,
@@ -133,18 +131,14 @@ const Sidebar: React.FC = () => {
     }));
   };
 
-  // Check if user has access to specific features based on role
   const hasAccess = (requiredRoles: UserRole[]) => {
     if (!role) return false;
     
-    // Administrator can access everything
     if (role === 'administrator') return true;
     
-    // Check if user's role is in the required roles
     return requiredRoles.includes(role);
   };
 
-  // Define menu items with required roles
   const menuItems = [
     {
       title: "Core",
@@ -257,22 +251,17 @@ const Sidebar: React.FC = () => {
       ]
     }
   ];
-  
-  // Filter menu items based on user role
+
   const filteredMenuItems = menuItems.map(section => {
-    // Filter items based on role
     const filteredItems = section.items.filter(item => {
-      // If no role is set or no roles are specified for the item, don't show it
       if (!role || !item.roles) return false;
       
-      // Show if the user's role is in the item's allowed roles
       return item.roles.includes(role as UserRole);
     }).map(item => ({
       ...item,
-      iconComponent: iconMap[item.icon] || FileText // Use FileText as fallback
+      iconComponent: iconMap[item.icon] || FileText
     }));
     
-    // Only include sections that have visible items
     return {
       ...section,
       items: filteredItems,
@@ -280,7 +269,6 @@ const Sidebar: React.FC = () => {
     };
   }).filter(section => section.visible);
 
-  // Fallback menu items for core section if filtered items are empty
   const coreMenuItems = [
     {
       title: "Dashboard",
@@ -296,25 +284,32 @@ const Sidebar: React.FC = () => {
     }
   ];
 
-  // Get items safely using optional chaining and nullish coalescing
   const getCoreItems = () => {
-    // Fixed: Make sure we have items available before accessing them
-    return (filteredMenuItems[0]?.items || coreMenuItems);
+    if (filteredMenuItems.length === 0 || !filteredMenuItems[0]?.items) {
+      return coreMenuItems;
+    }
+    return filteredMenuItems[0].items;
   };
 
   const getExtensionItems = () => {
-    // Fixed: Add null check and provide a default empty array
-    return filteredMenuItems[1]?.items || [];
+    if (filteredMenuItems.length < 2 || !filteredMenuItems[1]?.items) {
+      return [];
+    }
+    return filteredMenuItems[1].items;
   };
 
   const getSpecializedItems = () => {
-    // Fixed: Add null check and provide a default empty array
-    return filteredMenuItems[2]?.items || [];
+    if (filteredMenuItems.length < 3 || !filteredMenuItems[2]?.items) {
+      return [];
+    }
+    return filteredMenuItems[2].items;
   };
 
   const getAdminItems = () => {
-    // Fixed: Add null check and provide a default empty array
-    return filteredMenuItems[3]?.items || [];
+    if (filteredMenuItems.length < 4 || !filteredMenuItems[3]?.items) {
+      return [];
+    }
+    return filteredMenuItems[3].items;
   };
 
   return (
@@ -346,7 +341,6 @@ const Sidebar: React.FC = () => {
       </SidebarHeader>
       
       <SidebarContent>
-        {/* Core Pages - Available to all users */}
         <SidebarGroup>
           <SidebarGroupLabel>Core</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -365,7 +359,6 @@ const Sidebar: React.FC = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         
-        {/* Extension Modules - Role-based access */}
         {getExtensionItems().length > 0 && (
           <SidebarGroup>
             <div className="flex justify-between items-center">
@@ -393,7 +386,6 @@ const Sidebar: React.FC = () => {
           </SidebarGroup>
         )}
         
-        {/* Specialized Views */}
         {getSpecializedItems().length > 0 && (
           <SidebarGroup>
             <div className="flex justify-between items-center">
@@ -421,7 +413,6 @@ const Sidebar: React.FC = () => {
           </SidebarGroup>
         )}
         
-        {/* Favorites and Recent sections remain the same */}
         <SidebarGroup>
           <div className="flex justify-between items-center">
             <SidebarGroupLabel>Favorites</SidebarGroupLabel>
@@ -480,7 +471,6 @@ const Sidebar: React.FC = () => {
           )}
         </SidebarGroup>
         
-        {/* Admin settings - Only for Administrators */}
         {getAdminItems().map((item) => (
           <SidebarGroup key={item.path}>
             <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
