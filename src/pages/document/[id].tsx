@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Descendant } from 'slate';
 import { ArrowLeft, Save } from 'lucide-react';
+import { CustomElement } from '@/types/slate';
 
 const DocumentPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +50,7 @@ const DocumentPage = () => {
         }
         
         // Create a deep copy to ensure we're not affected by references
-        const contentCopy = JSON.parse(JSON.stringify(editorContent));
+        const contentCopy = JSON.parse(JSON.stringify(editorContent)) as CustomElement[];
         
         return updateDocument(id!, {
           title: documentTitle,

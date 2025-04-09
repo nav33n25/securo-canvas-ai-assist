@@ -10,7 +10,7 @@ import { withSecurityBlocks } from './withSecurityBlocks';
 import { Shield, Save, Eye, Clock, AlertTriangle } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
 import { toast } from '@/components/ui/use-toast';
-import { CustomElement } from '@/types/slate';
+import { CustomElement, CustomText } from '@/types/slate';
 import { Button } from '@/components/ui/button';
 
 interface DocumentEditorProps {
@@ -61,6 +61,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [securityScore, setSecurityScore] = useState<number>(0);
   const previousValueRef = useRef<string>(JSON.stringify(defaultValue));
   const contentChangeTimeoutRef = useRef<number | null>(null);
+  const isInitialRender = useRef<boolean>(true);
   
   const editor = useMemo(() => {
     return withSecurityBlocks(withHistory(withReact(createEditor())));
@@ -75,6 +76,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
         setValue(initialValue);
         previousValueRef.current = JSON.stringify(initialValue);
         calculateSecurityScore(initialValue);
+        isInitialRender.current = false;
       } catch (error) {
         console.error('Error setting editor value:', error);
         toast({
@@ -296,6 +298,16 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
             <AlertTriangle className={`h-4 w-4 ${securityScore > 70 ? 'text-green-500' : securityScore > 40 ? 'text-yellow-500' : 'text-red-500'}`} />
             <span className="text-sm">Security Score: {securityScore}</span>
           </div>
+          
+          <Button 
+            onClick={handleSave}
+            disabled={isSaving}
+            size="sm"
+            className="bg-secure hover:bg-secure-darker"
+          >
+            <Save className="h-4 w-4 mr-1" />
+            {isSaving ? 'Saving...' : 'Save'}
+          </Button>
           
           <Button 
             onClick={toggleAIAssistant}

@@ -1,11 +1,12 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { CustomElement } from '@/types/slate';
 
 export interface Document {
   id: string;
   title: string;
-  content: any[];
+  content: CustomElement[];
   created_at: string;
   updated_at: string;
   user_id: string;
@@ -20,7 +21,7 @@ export interface DocumentTemplate {
   id: string;
   name: string;
   description?: string;
-  content: any[];
+  content: CustomElement[];
   category: string;
   created_at: string;
   updated_at: string;
@@ -61,7 +62,7 @@ export async function getDocument(id: string) {
   console.log('Raw document content from database:', data.content);
   
   // Ensure we have valid content structure using our sanitize function
-  const content = data.content as any;
+  const content = data.content as unknown as CustomElement[];
   data.content = sanitizeContent(content);
   
   console.log('Document after sanitization:', {
@@ -70,7 +71,7 @@ export async function getDocument(id: string) {
     contentLength: Array.isArray(data.content) ? data.content.length : 0,
     version: data.version,
     firstNodeType: Array.isArray(data.content) && data.content.length > 0 ? 
-      (data.content[0] as any).type : 'none'
+      (data.content[0] as CustomElement).type : 'none'
   });
   
   return data as Document;
@@ -79,7 +80,7 @@ export async function getDocument(id: string) {
 export async function createDocument(document: Omit<Partial<Document>, 'title'> & { title: string }) {
   // Ensure we have valid content structure
   if (!document.content || !Array.isArray(document.content) || document.content.length === 0) {
-    document.content = [{ type: 'paragraph', children: [{ text: '' }] }];
+    document.content = [{ type: 'paragraph', children: [{ text: '' }] }] as CustomElement[];
   }
 
   const { data, error } = await supabase
@@ -98,13 +99,13 @@ export async function createDocument(document: Omit<Partial<Document>, 'title'> 
 }
 
 // Helper function to ensure content is properly structured
-function sanitizeContent(content: any): any[] {
+function sanitizeContent(content: any): CustomElement[] {
   console.log('Sanitizing content:', typeof content);
   
   // If content isn't an array or is null/undefined, create a default empty document
   if (!content || !Array.isArray(content) || content.length === 0) {
     console.log('Content is invalid, returning default paragraph');
-    return [{ type: 'paragraph', children: [{ text: '' }] }];
+    return [{ type: 'paragraph', children: [{ text: '' }] }] as CustomElement[];
   }
 
   try {
@@ -115,7 +116,7 @@ function sanitizeContent(content: any): any[] {
     // Ensure the result is an array
     if (!Array.isArray(parsed)) {
       console.error('Content is not an array after parsing:', parsed);
-      return [{ type: 'paragraph', children: [{ text: '' }] }];
+      return [{ type: 'paragraph', children: [{ text: '' }] }] as CustomElement[];
     }
     
     // Validate and fix each node in the content
@@ -164,14 +165,14 @@ function sanitizeContent(content: any): any[] {
     
     // One last check to ensure we have content
     if (parsed.length === 0) {
-      return [{ type: 'paragraph', children: [{ text: '' }] }];
+      return [{ type: 'paragraph', children: [{ text: '' }] }] as CustomElement[];
     }
     
     console.log('Sanitized content successfully, nodes count:', parsed.length);
-    return parsed;
+    return parsed as CustomElement[];
   } catch (error) {
     console.error('Error sanitizing content:', error);
-    return [{ type: 'paragraph', children: [{ text: '' }] }];
+    return [{ type: 'paragraph', children: [{ text: '' }] }] as CustomElement[];
   }
 }
 
@@ -179,7 +180,7 @@ export async function updateDocument(id: string, document: Partial<Document>) {
   console.log('updateDocument called with:', { id, documentTitle: document.title });
   
   if (document.content) {
-    const content = document.content as any[];
+    const content = document.content as CustomElement[];
     console.log('Content length to save:', content.length);
     console.log('First node type:', content[0]?.type || 'unknown');
   }
@@ -265,7 +266,7 @@ export async function updateDocument(id: string, document: Partial<Document>) {
     console.log('Document updated successfully:', {
       id: data.id,
       title: data.title,
-      contentLength: Array.isArray(data.content) ? (data.content as any[]).length : 0,
+      contentLength: Array.isArray(data.content) ? (data.content as CustomElement[]).length : 0,
       version: data.version
     });
     
