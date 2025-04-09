@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Editor, Transforms, Element as SlateElement, Node } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -7,11 +6,12 @@ import Toolbar from './Toolbar';
 import { renderElement, renderLeaf } from './RenderElements';
 import { Card, CardContent } from '@/components/ui/card';
 import { withSecurityBlocks } from './withSecurityBlocks';
-import { Shield, Save, Eye, Clock, AlertTriangle } from 'lucide-react';
+import { Shield, Save, AlertTriangle, Clock } from 'lucide-react';
 import AIAssistantPanel from './AIAssistantPanel';
 import { toast } from '@/components/ui/use-toast';
 import { CustomElement, CustomText } from '@/types/slate';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DocumentEditorProps {
   initialValue: Descendant[];
@@ -313,10 +313,19 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({
             </div>
           )}
           
-          <div className="flex items-center gap-1 bg-slate-800 px-3 py-1 rounded-full">
-            <AlertTriangle className={`h-4 w-4 ${securityScore > 70 ? 'text-green-500' : securityScore > 40 ? 'text-yellow-500' : 'text-red-500'}`} />
-            <span className="text-sm">Security Score: {securityScore}</span>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 bg-slate-800 px-3 py-1 rounded-full">
+                  <AlertTriangle className={`h-4 w-4 ${securityScore > 70 ? 'text-green-500' : securityScore > 40 ? 'text-yellow-500' : 'text-red-500'}`} />
+                  <span className="text-sm">Security Score: {securityScore}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs">Security Score evaluates your document's security content quality. Higher scores indicate better security documentation with appropriate security blocks, terminology, and structure.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <Button 
             onClick={handleSave}

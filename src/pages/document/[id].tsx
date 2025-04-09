@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +9,7 @@ import DocumentEditor from '@/components/editor/DocumentEditor';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Descendant } from 'slate';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { CustomElement } from '@/types/slate';
 
 const DocumentPage = () => {
@@ -280,28 +279,17 @@ const DocumentPage = () => {
   return (
     <AppLayout>
       <div className="container mx-auto py-4 px-4 sm:px-6">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center justify-between mb-4">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => navigate('/documents')}
-            className="mr-2"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
           
-          {!isLoading && (
-            <Button
-              onClick={handleSave}
-              disabled={isSaving || !hasChanges}
-              className="bg-blue-500 hover:bg-blue-600"
-              size="sm"
-            >
-              <Save className="h-4 w-4 mr-1" />
-              {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-          )}
+          {/* Save button moved to DocumentEditor to avoid duplication */}
         </div>
         
         {isLoading ? (
