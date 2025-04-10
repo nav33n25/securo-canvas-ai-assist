@@ -29,13 +29,14 @@ export function useAuth() {
     login: (email: string, password: string) => {
       console.log('Login called with:', email);
       // Simulate successful login
-      context.setUser({ email });
-      return Promise.resolve();
+      if (context.user) return Promise.resolve();
+      
+      return context.login(email, password);
     },
     register: (params: RegisterParams) => {
       console.log('Register called with:', params);
       // Simulate successful registration
-      return Promise.resolve();
+      return context.register(params);
     },
     resetPassword: (email: string) => {
       console.log('Reset password called for:', email);
@@ -49,21 +50,8 @@ export function useAuth() {
     },
     updateProfile: (params: ProfileUpdateParams) => {
       console.log('Update profile called with:', params);
-      // Simulate profile update
-      if (context.profile) {
-        context.setProfile({
-          ...context.profile,
-          ...params
-        });
-      } else {
-        context.setProfile({
-          firstName: params.firstName || null,
-          lastName: params.lastName || null,
-          jobTitle: params.jobTitle || null,
-          avatarUrl: params.avatarUrl || null
-        });
-      }
-      return Promise.resolve();
+      // Pass the update to the context's updateProfile
+      return context.updateProfile(params);
     }
   };
 }

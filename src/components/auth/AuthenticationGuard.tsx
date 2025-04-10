@@ -8,10 +8,10 @@ interface AuthenticationGuardProps {
 }
 
 const AuthenticationGuard: React.FC<AuthenticationGuardProps> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  if (loading) {
     // Show a loading indicator while checking authentication
     return (
       <div className="flex h-screen items-center justify-center">
