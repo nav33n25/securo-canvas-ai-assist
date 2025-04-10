@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSecurityTickets } from '@/services/securityDataService';
@@ -41,8 +40,7 @@ const TicketingPage = () => {
     queryFn: getSecurityTickets
   });
 
-  // Apply filters
-  const filteredTickets = tickets
+  const filteredTickets = (tickets as SecurityTicket[])
     .filter(ticket => {
       if (searchQuery) {
         return ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -53,18 +51,16 @@ const TicketingPage = () => {
     .filter(ticket => statusFilter === 'all' || ticket.status === statusFilter)
     .filter(ticket => priorityFilter === 'all' || ticket.priority === priorityFilter);
 
-  // Get the selected ticket details
-  const selectedTicketData = tickets.find(ticket => ticket.id === selectedTicket);
+  const selectedTicketData = (tickets as SecurityTicket[]).find(ticket => ticket.id === selectedTicket);
 
-  // Calculate statistics for dashboard
-  const openTickets = tickets.filter(t => t.status === 'Open').length;
-  const inProgressTickets = tickets.filter(t => t.status === 'In Progress').length;
-  const pendingTickets = tickets.filter(t => t.status === 'Pending').length;
-  const resolvedTickets = tickets.filter(t => t.status === 'Resolved').length;
-  const closedTickets = tickets.filter(t => t.status === 'Closed').length;
+  const openTickets = (tickets as SecurityTicket[]).filter(t => t.status === 'open').length;
+  const inProgressTickets = (tickets as SecurityTicket[]).filter(t => t.status === 'in_progress').length;
+  const pendingTickets = (tickets as SecurityTicket[]).filter(t => t.status === 'review').length;
+  const resolvedTickets = (tickets as SecurityTicket[]).filter(t => t.status === 'resolved').length;
+  const closedTickets = (tickets as SecurityTicket[]).filter(t => t.status === 'closed').length;
 
-  const criticalTickets = tickets.filter(t => t.priority === 'Critical').length;
-  const highTickets = tickets.filter(t => t.priority === 'High').length;
+  const criticalTickets = (tickets as SecurityTicket[]).filter(t => t.priority === 'critical').length;
+  const highTickets = (tickets as SecurityTicket[]).filter(t => t.priority === 'high').length;
   
   return (
     <AppLayout>
@@ -231,7 +227,7 @@ const TicketingPage = () => {
                       
                       <TabsContent value="open" className="mt-0">
                         <TicketsTable 
-                          tickets={filteredTickets.filter(t => t.status === 'Open')} 
+                          tickets={filteredTickets.filter(t => t.status === 'open')} 
                           selectedTicketId={selectedTicket}
                           onSelectTicket={setSelectedTicket}
                         />
@@ -239,7 +235,7 @@ const TicketingPage = () => {
                       
                       <TabsContent value="in-progress" className="mt-0">
                         <TicketsTable 
-                          tickets={filteredTickets.filter(t => t.status === 'In Progress')} 
+                          tickets={filteredTickets.filter(t => t.status === 'in_progress')} 
                           selectedTicketId={selectedTicket}
                           onSelectTicket={setSelectedTicket}
                         />
@@ -247,7 +243,7 @@ const TicketingPage = () => {
                       
                       <TabsContent value="pending" className="mt-0">
                         <TicketsTable 
-                          tickets={filteredTickets.filter(t => t.status === 'Pending')} 
+                          tickets={filteredTickets.filter(t => t.status === 'pending')} 
                           selectedTicketId={selectedTicket}
                           onSelectTicket={setSelectedTicket}
                         />
@@ -255,7 +251,7 @@ const TicketingPage = () => {
                       
                       <TabsContent value="resolved" className="mt-0">
                         <TicketsTable 
-                          tickets={filteredTickets.filter(t => t.status === 'Resolved' || t.status === 'Closed')} 
+                          tickets={filteredTickets.filter(t => t.status === 'resolved' || t.status === 'closed')} 
                           selectedTicketId={selectedTicket}
                           onSelectTicket={setSelectedTicket}
                         />

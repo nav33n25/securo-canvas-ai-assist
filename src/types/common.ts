@@ -9,7 +9,7 @@ import {
 } from './auth-types';
 
 // Re-export ticket types to avoid import conflicts
-export {
+export type {
   TicketStatus,
   TicketPriority,
   TicketStatusCapitalized,

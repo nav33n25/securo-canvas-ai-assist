@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getRedTeamOperations, getMitreAttackData } from '@/services/securityDataService';
@@ -37,6 +36,20 @@ const RedTeamPage = () => {
     queryKey: ['mitreTechniques'],
     queryFn: getMitreAttackData
   });
+
+  const getTechniqueName = (techniqueId: string) => {
+    if (!mitreTechniques) return techniqueId;
+    
+    if (Array.isArray(mitreTechniques)) {
+      const technique = mitreTechniques.find(t => t.id === techniqueId);
+      return technique ? technique.name : techniqueId;
+    } else if (mitreTechniques.techniques) {
+      const technique = mitreTechniques.techniques.find(t => t.id === techniqueId);
+      return technique ? technique.name : techniqueId;
+    }
+    
+    return techniqueId;
+  };
 
   // Calculate statistics
   const activeOps = operations.filter(op => op.status === 'Active').length;
@@ -228,16 +241,16 @@ const RedTeamPage = () => {
                     <h3 className="text-lg font-medium mb-2">Attack Techniques</h3>
                     <div className="space-y-3">
                       {selectedOperation.techniques.map(techId => {
-                        const technique = mitreTechniques.find(t => t.id === techId);
+                        const technique = getTechniqueName(techId);
                         return technique ? (
                           <div key={techId} className="rounded-md border p-3">
                             <div className="flex justify-between mb-2">
-                              <h4 className="font-medium">{technique.id}: {technique.name}</h4>
-                              <Badge>{technique.tactic}</Badge>
+                              <h4 className="font-medium">{techId}: {technique}</h4>
+                              <Badge>{technique}</Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">{technique.description}</p>
+                            <p className="text-sm text-muted-foreground mb-2">{technique}</p>
                             <div className="text-xs text-muted-foreground">
-                              Platforms: {technique.platforms.join(', ')}
+                              Platforms: {technique}
                             </div>
                           </div>
                         ) : (

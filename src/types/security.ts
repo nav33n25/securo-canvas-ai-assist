@@ -117,6 +117,18 @@ export interface MitreAttackTechnique {
   description: string;
 }
 
+export interface KnowledgeBaseArticle {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  tags: string[];
+  author: string;
+  published_date: string;
+  last_updated: string;
+  related_articles?: string[];
+}
+
 export function getMitreTechnique(data: any, techniqueId: string): MitreAttackTechnique | undefined {
   if (!data) return undefined;
   

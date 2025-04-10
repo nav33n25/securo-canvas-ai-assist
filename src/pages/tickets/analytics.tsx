@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTicketAnalytics, TicketAnalytics } from '@/services/securityDataService';
@@ -27,7 +26,7 @@ const STATUS_NAMES = {
 };
 
 const TicketAnalyticsPage = () => {
-  const { data, isLoading, error } = useQuery({
+  const { data: analytics = {} as TicketAnalytics, isLoading } = useQuery({
     queryKey: ['ticketAnalytics'],
     queryFn: getTicketAnalytics
   });
@@ -44,7 +43,7 @@ const TicketAnalyticsPage = () => {
     );
   }
 
-  if (error || !data) {
+  if (!analytics) {
     return (
       <AppLayout>
         <div className="container mx-auto py-8">
@@ -58,24 +57,24 @@ const TicketAnalyticsPage = () => {
 
   // Format data for status pie chart
   const statusData = [
-    { name: 'Open', value: data.byStatus.open },
-    { name: 'In Progress', value: data.byStatus.in_progress },
-    { name: 'In Review', value: data.byStatus.review },
-    { name: 'Resolved', value: data.byStatus.resolved },
-    { name: 'Closed', value: data.byStatus.closed }
+    { name: 'Open', value: analytics.byStatus.open },
+    { name: 'In Progress', value: analytics.byStatus.in_progress },
+    { name: 'In Review', value: analytics.byStatus.review },
+    { name: 'Resolved', value: analytics.byStatus.resolved },
+    { name: 'Closed', value: analytics.byStatus.closed }
   ];
   
   // Format data for priority pie chart
   const priorityData = [
-    { name: 'Critical', value: data.byPriority.critical, color: PRIORITY_COLORS.critical },
-    { name: 'High', value: data.byPriority.high, color: PRIORITY_COLORS.high },
-    { name: 'Medium', value: data.byPriority.medium, color: PRIORITY_COLORS.medium },
-    { name: 'Low', value: data.byPriority.low, color: PRIORITY_COLORS.low }
+    { name: 'Critical', value: analytics.byPriority.critical, color: PRIORITY_COLORS.critical },
+    { name: 'High', value: analytics.byPriority.high, color: PRIORITY_COLORS.high },
+    { name: 'Medium', value: analytics.byPriority.medium, color: PRIORITY_COLORS.medium },
+    { name: 'Low', value: analytics.byPriority.low, color: PRIORITY_COLORS.low }
   ];
 
   // Calculate percentages
-  const resolvedPercentage = Number(((data.resolution.resolvedCount / data.byStatus.total) * 100).toFixed(1));
-  const openPercentage = Number(((data.byStatus.open / data.byStatus.total) * 100).toFixed(1));
+  const resolvedPercentage = Number(((analytics.resolution.count / analytics.byStatus.total) * 100).toFixed(1));
+  const openPercentage = Number(((analytics.byStatus.open / analytics.byStatus.total) * 100).toFixed(1));
   
   return (
     <AppLayout>
@@ -97,9 +96,9 @@ const TicketAnalyticsPage = () => {
               <CardDescription>All time</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{data.byStatus.total}</div>
+              <div className="text-3xl font-bold">{analytics.byStatus?.open || 0}</div>
               <div className="text-sm text-muted-foreground mt-1">
-                {data.byStatus.open} open / {data.resolution.resolvedCount} resolved
+                {analytics.byStatus.open} open / {analytics.resolution.count} resolved
               </div>
             </CardContent>
           </Card>
@@ -120,11 +119,11 @@ const TicketAnalyticsPage = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {data.resolution.averageTimeToResolve.toFixed(1)} hrs
+                {analytics.resolution.averageTimeToResolve.toFixed(1)} hrs
               </div>
               <div className="flex items-center text-sm text-muted-foreground mt-1">
                 <Clock className="h-4 w-4 mr-1" />
-                Based on {data.resolution.resolvedCount} tickets
+                Based on {analytics.resolution.count} tickets
               </div>
             </CardContent>
           </Card>
@@ -206,8 +205,8 @@ const TicketAnalyticsPage = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {Object.entries(data.byStatus).filter(([key]) => key !== 'total').map(([status, count]) => {
-                  const percentage = (count as number) / data.byStatus.total * 100;
+                {Object.entries(analytics.byStatus).filter(([key]) => key !== 'total').map(([status, count]) => {
+                  const percentage = (count as number) / analytics.byStatus.total * 100;
                   return (
                     <div key={status} className="space-y-1">
                       <div className="flex justify-between">
@@ -231,9 +230,9 @@ const TicketAnalyticsPage = () => {
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={data.trend.dates.map((date, i) => ({
+                data={analytics.trend.dates.map((date, i) => ({
                   date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                  count: data.trend.counts[i]
+                  count: analytics.trend.counts[i]
                 }))}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >

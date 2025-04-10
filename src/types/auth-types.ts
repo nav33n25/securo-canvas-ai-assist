@@ -54,7 +54,7 @@ export interface ProfileUpdateParams {
   avatarUrl?: string;
   role?: UserRole;
   subscriptionTier?: SubscriptionTier;
-  jobTitle?: string; // Adding jobTitle to fix profile page errors
+  jobTitle?: string;
 }
 
 export interface RegisterParams {
@@ -75,3 +75,21 @@ export interface TicketCreateData {
   assignee_id?: string;
   due_date?: string | Date;
 }
+
+// Helper functions to normalize ticket status and priority
+export const normalizeTicketStatus = (status: TicketStatus | TicketStatusCapitalized): TicketStatus => {
+  if (status === 'Open') return 'open';
+  if (status === 'In Progress') return 'in_progress';
+  if (status === 'Pending') return 'review';
+  if (status === 'Resolved') return 'resolved';
+  if (status === 'Closed') return 'closed';
+  return status as TicketStatus;
+};
+
+export const normalizeTicketPriority = (priority: TicketPriority | TicketPriorityCapitalized): TicketPriority => {
+  if (priority === 'Low') return 'low';
+  if (priority === 'Medium') return 'medium';
+  if (priority === 'High') return 'high';
+  if (priority === 'Critical') return 'critical';
+  return priority as TicketPriority;
+};

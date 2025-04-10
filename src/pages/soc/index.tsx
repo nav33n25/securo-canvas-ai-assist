@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSocAlerts, getAssets, getMitreAttackData } from '@/services/securityDataService';
@@ -70,6 +69,20 @@ const SOCPage = () => {
   const containedCount = alerts.filter(a => a.status === 'Contained').length;
   const resolvedCount = alerts.filter(a => a.status === 'Resolved').length;
   
+  const getTechniqueName = (techniqueId: string) => {
+    if (!mitreTechniques) return techniqueId;
+    
+    if (Array.isArray(mitreTechniques)) {
+      const technique = mitreTechniques.find(t => t.id === techniqueId);
+      return technique ? technique.name : techniqueId;
+    } else if (mitreTechniques.techniques) {
+      const technique = mitreTechniques.techniques.find(t => t.id === techniqueId);
+      return technique ? technique.name : techniqueId;
+    }
+    
+    return techniqueId;
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto py-6 space-y-6">
@@ -327,10 +340,10 @@ const SOCPage = () => {
                       <h3 className="text-sm font-medium mb-1">MITRE ATT&CK Techniques</h3>
                       <div className="space-y-1">
                         {selectedAlert.mitre_techniques.map(techniqueId => {
-                          const technique = mitreTechniques.find(t => t.id === techniqueId);
+                          const technique = getTechniqueName(techniqueId);
                           return (
                             <div key={techniqueId} className="text-sm px-3 py-2 rounded bg-muted">
-                              {technique ? `${technique.id}: ${technique.name}` : techniqueId}
+                              {technique}
                             </div>
                           );
                         })}

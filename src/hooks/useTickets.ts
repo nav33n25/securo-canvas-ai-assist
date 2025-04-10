@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SecurityTicket } from '@/types/common';
 import { TicketCreateData, TicketStatus } from '@/types/auth-types';
@@ -9,8 +9,21 @@ import { useAuth } from '@/hooks/useAuth';
 export function useTickets() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [tickets, setTickets] = useState<SecurityTicket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Fetch tickets on initial load
+    getTickets().then(fetchedTickets => {
+      setTickets(fetchedTickets);
+      setIsLoading(false);
+    }).catch(err => {
+      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      setIsLoading(false);
+    });
+  }, []);
 
   const getTickets = async (): Promise<SecurityTicket[]> => {
     setLoading(true);
@@ -55,6 +68,19 @@ export function useTickets() {
     }
   };
 
+  const filterTickets = (filterType: 'all' | 'assigned' | 'created'): SecurityTicket[] => {
+    if (!user) return [];
+    
+    switch (filterType) {
+      case 'assigned':
+        return tickets.filter(ticket => ticket.assignee_id === user.id);
+      case 'created':
+        return tickets.filter(ticket => ticket.reporter_id === user.id);
+      default:
+        return tickets;
+    }
+  };
+
   const createTicket = async (ticketData: TicketCreateData): Promise<SecurityTicket> => {
     setLoading(true);
     setError(null);
@@ -81,6 +107,9 @@ export function useTickets() {
         title: 'Ticket Created',
         description: 'Your new security ticket has been created successfully.'
       });
+      
+      // Update the local tickets state
+      setTickets(prevTickets => [data as SecurityTicket, ...prevTickets]);
       
       return data as SecurityTicket;
     } catch (err) {
@@ -116,6 +145,13 @@ export function useTickets() {
         title: 'Ticket Updated',
         description: 'The security ticket has been updated successfully.'
       });
+      
+      // Update the local tickets state
+      setTickets(prevTickets => 
+        prevTickets.map(ticket => 
+          ticket.id === id ? { ...ticket, ...updates } : ticket
+        )
+      );
       
       return data as SecurityTicket;
     } catch (err) {
@@ -157,6 +193,9 @@ export function useTickets() {
         title: 'Ticket Deleted',
         description: 'The security ticket has been deleted successfully.'
       });
+      
+      // Update the local tickets state
+      setTickets(prevTickets => prevTickets.filter(ticket => ticket.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err : new Error('An unknown error occurred'));
       
@@ -175,12 +214,15 @@ export function useTickets() {
   return {
     loading,
     error,
+    tickets,
+    isLoading,
     getTickets,
     getTicketById,
     createTicket,
     updateTicket,
     updateTicketStatus,
     assignTicket,
-    deleteTicket
+    deleteTicket,
+    filterTickets
   };
 }

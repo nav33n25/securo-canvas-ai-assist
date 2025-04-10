@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getThreatIntelFeeds, getMitreAttackData } from '@/services/securityDataService';
@@ -42,6 +41,20 @@ const ThreatIntelPage = () => {
     queryFn: getMitreAttackData
   });
   
+  const getTechniqueName = (techniqueId: string) => {
+    if (!mitreTechniques) return techniqueId;
+    
+    if (Array.isArray(mitreTechniques)) {
+      const technique = mitreTechniques.find(t => t.id === techniqueId);
+      return technique ? technique.name : techniqueId;
+    } else if (mitreTechniques.techniques) {
+      const technique = mitreTechniques.techniques.find(t => t.id === techniqueId);
+      return technique ? technique.name : techniqueId;
+    }
+    
+    return techniqueId;
+  };
+
   // Apply filters
   const filteredThreats = threats
     .filter(threat => {
@@ -322,15 +335,15 @@ const ThreatIntelPage = () => {
                       <h3 className="text-sm font-medium mb-2">MITRE ATT&CK Techniques</h3>
                       <div className="space-y-2">
                         {selectedThreat.mitre_techniques.map(techId => {
-                          const technique = mitreTechniques.find(t => t.id === techId);
+                          const technique = getTechniqueName(techId);
                           return technique ? (
                             <div 
                               key={techId} 
                               className="text-sm p-2 border rounded"
                             >
                               <div className="flex justify-between items-start">
-                                <div className="font-medium">{technique.id}: {technique.name}</div>
-                                <Badge>{technique.tactic}</Badge>
+                                <div className="font-medium">{techId}: {technique}</div>
+                                <Badge>{technique}</Badge>
                               </div>
                             </div>
                           ) : (

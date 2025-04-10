@@ -1,219 +1,321 @@
-
 import React from 'react';
-import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import SecurityStatistics from '@/components/dashboard/SecurityStatistics';
-import DocumentsList from '@/components/dashboard/DocumentsList';
-import { Shield, AlertCircle, Clock, Users, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  ArrowRight,
+  BarChart,
+  CreditCard,
+  FileText,
+  HelpCircle,
+  LineChart,
+  Lock,
+  Settings,
+  ShieldAlert,
+  User,
+  UserPlus,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import AppLayout from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
-// Dashboard activity feed types
-type ActivityItem = {
-  id: string;
-  user: string;
-  action: string;
-  target: string;
-  timestamp: string;
-  icon: React.ElementType;
+const WelcomeMessage = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Welcome!</CardTitle>
+        <CardDescription>
+          {children}
+        </CardDescription>
+      </CardHeader>
+    </Card>
+  );
 };
 
-// Mock activity feed data
-const recentActivity: ActivityItem[] = [
-  { 
-    id: '1',
-    user: 'John Smith',
-    action: 'created document',
-    target: 'SOC 2 Compliance Report',
-    timestamp: '10 minutes ago',
-    icon: Shield
-  },
-  { 
-    id: '2',
-    user: 'Maria Garcia',
-    action: 'commented on',
-    target: 'Incident Response Procedure',
-    timestamp: '1 hour ago',
-    icon: AlertCircle
-  },
-  { 
-    id: '3',
-    user: 'David Chen',
-    action: 'updated asset',
-    target: 'AWS Production Environment',
-    timestamp: '3 hours ago',
-    icon: Clock
-  },
-  { 
-    id: '4',
-    user: 'Sarah Johnson',
-    action: 'shared document with',
-    target: 'Security Team',
-    timestamp: '5 hours ago',
-    icon: Users
+const QuickActions = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Quick Actions</CardTitle>
+        <CardDescription>
+          Jump straight into common tasks
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 grid-cols-2 md:grid-cols-3">
+        <Button variant="secondary" className="justify-start">
+          <UserPlus className="mr-2 h-4 w-4" />
+          Invite Team Member
+        </Button>
+        <Button variant="secondary" className="justify-start">
+          <FileText className="mr-2 h-4 w-4" />
+          Create New Document
+        </Button>
+        <Button variant="secondary" className="justify-start">
+          <ShieldAlert className="mr-2 h-4 w-4" />
+          Report Security Issue
+        </Button>
+        <Button variant="secondary" className="justify-start">
+          <HelpCircle className="mr-2 h-4 w-4" />
+          Browse Knowledge Base
+        </Button>
+        <Button variant="secondary" className="justify-start">
+          <BarChart className="mr-2 h-4 w-4" />
+          View Analytics
+        </Button>
+        <Button variant="secondary" className="justify-start">
+          <Settings className="mr-2 h-4 w-4" />
+          Adjust Settings
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+const RecentActivity = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Recent Activity</CardTitle>
+        <CardDescription>
+          Stay up to date on what's been happening
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium leading-none">
+              New user registered
+            </p>
+          </div>
+          <Badge variant="secondary">1 hour ago</Badge>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium leading-none">
+              Document edited
+            </p>
+          </div>
+          <Badge variant="secondary">2 hours ago</Badge>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium leading-none">
+              Security alert triggered
+            </p>
+          </div>
+          <Badge variant="secondary">3 hours ago</Badge>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const BillingOverview = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Billing Overview</CardTitle>
+        <CardDescription>
+          Review your current billing status
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium leading-none">
+              Current Plan: <Badge variant="outline">Professional</Badge>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Next payment due on January 1, 2024
+            </p>
+          </div>
+          <div className="text-2xl font-bold">$49.00</div>
+        </div>
+        <Separator className="my-4" />
+        <div className="flex justify-between">
+          <p className="text-sm text-muted-foreground">
+            View full billing history
+          </p>
+          <ArrowRight className="h-4 w-4" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const DashboardPage: React.FC = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto py-6 space-y-6">
+          <Skeleton className="h-8 w-1/4" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-1/2" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-4 w-1/4 mt-2" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Skeleton className="h-8 w-1/4" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[...Array(2)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-1/2" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-40" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
-];
-
-// Mock AI suggested content
-const aiSuggestions = [
-  { 
-    id: '1', 
-    title: 'Complete your Threat Model', 
-    description: 'Your application security assessment is missing threat modeling documentation',
-    progress: 30
-  },
-  { 
-    id: '2', 
-    title: 'Update Security Controls', 
-    description: 'NIST framework has been updated with new controls',
-    progress: 0
-  },
-  { 
-    id: '3', 
-    title: 'Review High Severity CVEs', 
-    description: '3 new high severity vulnerabilities affect your assets',
-    progress: 10
-  },
-];
-
-const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const { profile } = useAuth();
-  
-  const timeOfDay = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
-
-  const firstName = profile?.first_name || 'Security Professional';
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{timeOfDay()}, {firstName}</h1>
-            <p className="text-muted-foreground">
-              Here's what's happening in your security workspace today.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate('/documents')}>
-              Create Document
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/assets')}>
-              Manage Assets
-            </Button>
-          </div>
+      <div className="container mx-auto py-6 space-y-6">
+        <WelcomeMessage>
+          Welcome back, {user?.firstName || 'Security Professional'}
+        </WelcomeMessage>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Total Users</CardTitle>
+              <CardDescription>Across all teams</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">124</div>
+              <p className="text-sm text-muted-foreground">
+                +12% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Tickets</CardTitle>
+              <CardDescription>Currently open issues</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">32</div>
+              <p className="text-sm text-muted-foreground">
+                -5% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Security Score</CardTitle>
+              <CardDescription>Overall security posture</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">88</div>
+              <p className="text-sm text-muted-foreground">
+                +2% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Subscription</CardTitle>
+              <CardDescription>Your current plan</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">Professional</div>
+              <p className="text-sm text-muted-foreground">
+                Expires December 31, 2023
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="space-y-4">
-            <SecurityStatistics />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Latest activity across your workspace</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentActivity.map(activity => (
-                      <div key={activity.id} className="flex gap-3">
-                        <div className="mt-0.5">
-                          <div className="bg-secondary rounded-full p-1.5">
-                            <activity.icon className="h-4 w-4" />
-                          </div>
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-sm">
-                            <span className="font-medium">{activity.user}</span>
-                            {' '}{activity.action}{' '}
-                            <span className="font-medium">{activity.target}</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-                        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <QuickActions />
+          <RecentActivity />
+          <BillingOverview />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Settings</CardTitle>
+              <CardDescription>Manage your account settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Accordion type="single" collapsible>
+                <AccordionItem value="item-1">
+                  <AccordionTrigger>Profile Information</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" defaultValue={user?.firstName} className="bg-muted" disabled />
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>AI Suggestions</CardTitle>
-                      <CardDescription>Personalized recommendations</CardDescription>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" defaultValue={user?.email} className="bg-muted" disabled />
+                      </div>
                     </div>
-                    <Sparkles className="h-5 w-5 text-amber-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {aiSuggestions.map(suggestion => (
-                      <div key={suggestion.id} className="space-y-1">
-                        <div className="flex justify-between">
-                          <p className="text-sm font-medium">{suggestion.title}</p>
-                          <span className="text-xs text-muted-foreground">
-                            {suggestion.progress > 0 ? `${suggestion.progress}% complete` : 'Not started'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{suggestion.description}</p>
-                        <div className="h-1.5 w-full bg-secondary rounded-full mt-1">
-                          <div 
-                            className="h-full bg-secure rounded-full" 
-                            style={{ width: `${suggestion.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="documents">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Documents</CardTitle>
-                <CardDescription>Documents you've recently worked with</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <DocumentsList />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="tasks">
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Tasks</CardTitle>
-                <CardDescription>Assigned and recommended security tasks</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  The security tasks section is currently being developed and will be available soon.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="item-2">
+                  <AccordionTrigger>Notifications</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="email-notifications">Email Notifications</Label>
+                      <Switch id="email-notifications" defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="push-notifications">Push Notifications</Label>
+                      <Switch id="push-notifications" />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="item-3">
+                  <AccordionTrigger>Appearance</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="dark-mode">Dark Mode</Label>
+                      <Switch id="dark-mode" />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   );
 };
 
-export default Dashboard;
+export default DashboardPage;
