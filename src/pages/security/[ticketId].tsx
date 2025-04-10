@@ -1,25 +1,42 @@
+
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Calendar, Clock, User, Shield, MessageSquare, History } from 'lucide-react';
-import Layout from '@/components/layout';
+import AppLayout from '@/components/layout/AppLayout'; // Using AppLayout directly
 import TicketActivity from '@/components/security/TicketActivity';
 import TicketComments from '@/components/security/TicketComments';
 import UpdateTicketModal from '@/components/security/UpdateTicketModal';
-import { TICKET_PRIORITY, TICKET_STATUS } from '@/lib/constants';
-import { useUsers } from '@/hooks/useUsers';
 import { SecurityTicket } from '@/types/common';
+import { useUsers } from '@/hooks/useUsers';
+
+// Constants for ticket status and priority
+const TICKET_STATUS = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  review: 'In Review',
+  resolved: 'Resolved',
+  closed: 'Closed'
+};
+
+const TICKET_PRIORITY = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  critical: 'Critical'
+};
 
 const TicketDetailsPage: React.FC = () => {
-  const router = useRouter();
-  const { ticketId } = router.query;
+  const params = useParams();
+  const navigate = useNavigate();
+  const ticketId = params.ticketId;
   const [ticket, setTicket] = useState<SecurityTicket | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -75,7 +92,7 @@ const TicketDetailsPage: React.FC = () => {
     switch (status) {
       case 'open': return 'default';
       case 'in_progress': return 'secondary';
-      case 'resolved': return 'success';
+      case 'resolved': return 'secondary'; // Changed from 'success'
       case 'closed': return 'outline';
       default: return 'default';
     }
@@ -85,7 +102,7 @@ const TicketDetailsPage: React.FC = () => {
     switch (priority) {
       case 'low': return 'secondary';
       case 'medium': return 'default';
-      case 'high': return 'warning';
+      case 'high': return 'destructive'; // Changed from 'warning'
       case 'critical': return 'destructive';
       default: return 'default';
     }
@@ -104,10 +121,10 @@ const TicketDetailsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="container mx-auto py-6 space-y-6">
           <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/security')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/security')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Tickets
             </Button>
@@ -132,15 +149,15 @@ const TicketDetailsPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   if (!ticket) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="container mx-auto py-6">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/security')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/security')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Tickets
           </Button>
@@ -148,22 +165,22 @@ const TicketDetailsPage: React.FC = () => {
             <CardContent className="pt-6">
               <div className="text-center py-8">
                 <p className="text-muted-foreground">Ticket not found or you don't have permission to view it.</p>
-                <Button variant="outline" className="mt-4" onClick={() => router.push('/security')}>
+                <Button variant="outline" className="mt-4" onClick={() => navigate('/security')}>
                   Return to Security Dashboard
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   return (
-    <Layout>
+    <AppLayout>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/security')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/security')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Tickets
           </Button>
@@ -176,10 +193,10 @@ const TicketDetailsPage: React.FC = () => {
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
               <Badge variant={getStatusBadgeVariant(ticket.status)}>
-                {TICKET_STATUS[ticket.status]}
+                {TICKET_STATUS[ticket.status as keyof typeof TICKET_STATUS]}
               </Badge>
               <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
-                {TICKET_PRIORITY[ticket.priority]}
+                {TICKET_PRIORITY[ticket.priority as keyof typeof TICKET_PRIORITY]}
               </Badge>
               {ticket.category && (
                 <Badge variant="outline">{ticket.category}</Badge>
@@ -271,7 +288,7 @@ const TicketDetailsPage: React.FC = () => {
           />
         )}
       </div>
-    </Layout>
+    </AppLayout>
   );
 };
 

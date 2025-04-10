@@ -37,10 +37,10 @@ const AuthPage = () => {
       roles: subscriptionTierRoleMap['professional']
     },
     {
-      id: 'team',
-      name: 'Team',
-      description: 'Collaborative tools for small teams',
-      roles: subscriptionTierRoleMap['team']
+      id: 'enterprise',
+      name: 'Enterprise',
+      description: 'Collaborative tools for teams',
+      roles: subscriptionTierRoleMap['enterprise']
     }
   ];
 
@@ -137,7 +137,31 @@ const AuthPage = () => {
             </TabsList>
             
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!email || !password) {
+                  toast({
+                    title: 'Error',
+                    description: 'Please enter both email and password.',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                
+                setIsLoading(true);
+                
+                auth.login(email, password)
+                  .then(() => navigate('/dashboard'))
+                  .catch((error) => {
+                    console.error('Login error:', error);
+                    toast({
+                      title: 'Login failed',
+                      description: error.message || 'An error occurred during login.',
+                      variant: 'destructive',
+                    });
+                  })
+                  .finally(() => setIsLoading(false));
+              }} className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium">Email</label>
                   <Input
@@ -179,7 +203,44 @@ const AuthPage = () => {
             </TabsContent>
             
             <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                
+                if (!email || !password || !firstName || !lastName) {
+                  toast({
+                    title: 'Error',
+                    description: 'Please fill in all fields.',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                
+                setIsLoading(true);
+                
+                auth.register({
+                  email,
+                  password,
+                  firstName,
+                  lastName,
+                  subscriptionTier: 'individual'
+                })
+                  .then(() => {
+                    toast({
+                      title: 'Registration successful',
+                      description: 'Your account has been created. You may now log in.',
+                    });
+                    setActiveTab('login');
+                  })
+                  .catch((error) => {
+                    console.error('Signup error:', error);
+                    toast({
+                      title: 'Registration failed',
+                      description: error.message || 'An error occurred during registration.',
+                      variant: 'destructive',
+                    });
+                  })
+                  .finally(() => setIsLoading(false));
+              }} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label htmlFor="firstName" className="text-sm font-medium">First Name</label>

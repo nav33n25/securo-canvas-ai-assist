@@ -14,6 +14,33 @@ interface ActivityFeedProps {
 }
 
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, isLoading }) => {
+  // Helper function to format user activity
+  const formatUserActivity = (activity: ActivityItem) => {
+    const userName = activity.user?.name || 'A user';
+    let content = '';
+    
+    switch (activity.action) {
+      case 'INSERT':
+        content = `${userName} created a new ${activity.resource_type.replace(/_/g, ' ')}`;
+        break;
+      case 'UPDATE':
+        content = `${userName} updated a ${activity.resource_type.replace(/_/g, ' ')}`;
+        break;
+      case 'DELETE':
+        content = `${userName} deleted a ${activity.resource_type.replace(/_/g, ' ')}`;
+        break;
+      default:
+        content = `${userName} performed an action on ${activity.resource_type.replace(/_/g, ' ')}`;
+    }
+    
+    return {
+      user_name: userName,
+      content,
+      document_id: activity.resource_type === 'documents' ? activity.resource_id : null,
+      document_title: activity.details?.title || 'a document'
+    };
+  };
+  
   return (
     <Card className="shadow-md border border-slate-200">
       <CardHeader className="bg-slate-50 border-b border-slate-100">
@@ -37,24 +64,30 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, isLoading }) =>
           </div>
         ) : activities && activities.length > 0 ? (
           <div className="space-y-4">
-            {activities.map((activity) => (
-              <div key={activity.id} className="flex items-start pb-4 border-b last:border-0">
-                <div className="flex-shrink-0 mr-4">
-                  <div className="bg-muted rounded-full p-2 h-10 w-10 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
+            {activities.map((activity) => {
+              const formattedActivity = formatUserActivity(activity);
+              return (
+                <div key={activity.id} className="flex items-start pb-4 border-b last:border-0">
+                  <div className="flex-shrink-0 mr-4">
+                    <div className="bg-muted rounded-full p-2 h-10 w-10 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-medium">{formattedActivity.user_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formattedActivity.content} {formattedActivity.document_id ? 
+                        <Link to={`/document/${formattedActivity.document_id}`} className="text-secure hover:underline">
+                          {formattedActivity.document_title}
+                        </Link> : ''}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <p className="font-medium">{activity.user_name || 'A user'}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {activity.content} in {activity.document_id ? <Link to={`/document/${activity.document_id}`} className="text-secure hover:underline">{activity.document_title}</Link> : 'a document'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-6">

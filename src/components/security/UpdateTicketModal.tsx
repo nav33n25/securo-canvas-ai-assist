@@ -19,7 +19,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { SecurityTicket } from '@/types/common';
+import { SecurityTicket, TicketPriority, TicketStatus } from '@/types/common';
 import { useUsers } from '@/hooks/useUsers';
 
 interface UpdateTicketModalProps {
@@ -29,12 +29,20 @@ interface UpdateTicketModalProps {
 }
 
 const UpdateTicketModal: React.FC<UpdateTicketModalProps> = ({ ticket, open, onClose }) => {
-  const [status, setStatus] = useState(ticket.status);
-  const [priority, setPriority] = useState(ticket.priority);
-  const [assigneeId, setAssigneeId] = useState(ticket.assignee_id);
+  const [status, setStatus] = useState<TicketStatus>(ticket.status);
+  const [priority, setPriority] = useState<TicketPriority>(ticket.priority);
+  const [assigneeId, setAssigneeId] = useState<string | null>(ticket.assignee_id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { users } = useUsers();
   const { toast } = useToast();
+
+  const handleStatusChange = (value: string) => {
+    setStatus(value as TicketStatus);
+  };
+
+  const handlePriorityChange = (value: string) => {
+    setPriority(value as TicketPriority);
+  };
 
   const handleUpdateTicket = async () => {
     try {
@@ -87,7 +95,7 @@ const UpdateTicketModal: React.FC<UpdateTicketModalProps> = ({ ticket, open, onC
             <label className="text-sm font-medium">Status</label>
             <Select
               value={status}
-              onValueChange={setStatus}
+              onValueChange={handleStatusChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
@@ -106,7 +114,7 @@ const UpdateTicketModal: React.FC<UpdateTicketModalProps> = ({ ticket, open, onC
             <label className="text-sm font-medium">Priority</label>
             <Select
               value={priority}
-              onValueChange={setPriority}
+              onValueChange={handlePriorityChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select priority" />

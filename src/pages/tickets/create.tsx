@@ -1,5 +1,6 @@
-import { useRouter } from "next/router";
-import Link from "next/link";
+
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -7,7 +8,7 @@ import TicketForm from "@/components/tickets/TicketForm";
 import { Button } from "@/components/ui/button";
 
 export default function CreateTicketPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   return (
     <AppLayout>
@@ -16,13 +17,11 @@ export default function CreateTicketPage() {
           <Button
             variant="ghost"
             size="sm"
-            asChild
             className="gap-1"
+            onClick={() => navigate("/tickets")}
           >
-            <Link href="/tickets">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Tickets
-            </Link>
+            <ArrowLeft className="h-4 w-4" />
+            Back to Tickets
           </Button>
         </div>
 

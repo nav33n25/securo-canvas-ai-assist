@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/next-compatibility/router';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
 import {
   Card,
@@ -66,8 +66,8 @@ type Ticket = {
 };
 
 const TicketDetail = () => {
-  const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const id = router.query.id as string;
   const { user } = useAuth();
   const { users } = useUsers();
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -104,7 +104,6 @@ const TicketDetail = () => {
 
     fetchTicket();
 
-    // Subscribe to ticket changes
     const subscription = supabase
       .channel(`ticket-${id}`)
       .on('postgres_changes', {
@@ -135,7 +134,6 @@ const TicketDetail = () => {
     if (!ticket || !user) return;
     
     try {
-      // Track changes for activity log
       const changes: Record<string, { old: any; new: any }> = {};
       for (const [key, value] of Object.entries(editedTicket)) {
         if (key in ticket && ticket[key as keyof Ticket] !== value) {
@@ -146,7 +144,6 @@ const TicketDetail = () => {
         }
       }
 
-      // Update the ticket
       const { error } = await supabase
         .from('tickets')
         .update(editedTicket)
@@ -154,7 +151,6 @@ const TicketDetail = () => {
       
       if (error) throw error;
       
-      // Log activities for each change
       const activityPromises = Object.entries(changes).map(([field, change]) => {
         let activityType: string;
         let details: any = { field, old_value: change.old, new_value: change.new };
@@ -247,7 +243,7 @@ const TicketDetail = () => {
       case 'in_progress':
         return 'secondary';
       case 'resolved':
-        return 'outline';
+        return 'secondary';
       case 'closed':
         return 'outline';
       default:

@@ -1,5 +1,4 @@
 
-// Compatibility layer for Next.js router in React Router environment
 import { useNavigate, useLocation, useParams as useReactRouterParams } from 'react-router-dom';
 
 export function useRouter() {
@@ -12,7 +11,8 @@ export function useRouter() {
     pathname: location.pathname,
     query: Object.fromEntries(new URLSearchParams(location.search)),
     asPath: location.pathname + location.search,
-    back: () => navigate(-1 as any), // Using type assertion to work around the type issue
+    back: () => navigate(-1), // This works with React Router
+    forward: () => navigate(1), // Added forward navigation
   };
 }
 

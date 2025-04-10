@@ -15,6 +15,11 @@ export interface ActivityItem {
     name: string;
     avatar: string;
   } | null;
+  // Additional properties needed for ActivityFeed component
+  user_name?: string;
+  content?: string;
+  document_id?: string;
+  document_title?: string;
 }
 
 // Get user activities
@@ -103,6 +108,54 @@ export const getTeamActivities = async (teamId: string, limit = 20): Promise<Act
     }));
   } catch (error) {
     console.error('Error fetching team activities:', error);
+    return [];
+  }
+};
+
+// Function to fetch activity feed
+export const fetchActivityFeed = async (userId: string): Promise<ActivityItem[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('security_audit_log')
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          first_name,
+          last_name,
+          avatar_url
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    if (error) throw error;
+    
+    return data.map(item => {
+      const userName = item.profiles ? 
+        `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}`.trim() : 
+        'Unknown user';
+      
+      return {
+        id: item.id,
+        action: item.action,
+        resource_type: item.resource_type,
+        resource_id: item.resource_id,
+        details: item.details,
+        created_at: item.created_at,
+        user: item.profiles ? {
+          id: item.profiles.id,
+          name: userName,
+          avatar: item.profiles.avatar_url || ''
+        } : null,
+        user_name: userName,
+        content: formatActivity({...item, user: {id: '', name: userName, avatar: ''}}),
+        document_id: item.resource_type === 'documents' ? item.resource_id : null,
+        document_title: item.details?.title || 'Document'
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching activity feed:', error);
     return [];
   }
 };

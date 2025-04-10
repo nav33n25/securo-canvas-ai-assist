@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
@@ -23,7 +22,7 @@ import {
   Clock
 } from 'lucide-react';
 
-import { ActivityItem, fetchActivityFeed } from '@/services/activityService';
+import { ActivityItem, getUserActivities } from '@/services/activityService';
 import { RecentDocument, fetchRecentDocuments } from '@/services/documentService';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
 import RecentDocumentsSection from '@/components/dashboard/RecentDocumentsSection';
@@ -182,7 +181,7 @@ const Dashboard: React.FC = () => {
       
       try {
         setIsLoadingActivities(true);
-        const activities = await fetchActivityFeed(user.id);
+        const activities = await getUserActivities(user.id);
         setActivities(activities);
       } catch (err) {
         console.error('Error loading activity feed:', err);
