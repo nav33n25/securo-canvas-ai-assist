@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "@/lib/next-compatibility/router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, BarChart3 } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 import TicketList from "@/components/tickets/TicketList";
@@ -21,6 +21,10 @@ export default function TicketsPage() {
     router.push("/tickets/create");
   };
 
+  const navigateToAnalytics = () => {
+    router.push("/tickets/analytics");
+  };
+
   const getFilteredTickets = (): SecurityTicket[] => {
     return filterTickets(activeView as 'all' | 'assigned' | 'created');
   };
@@ -35,9 +39,14 @@ export default function TicketsPage() {
               Manage and track security issues and vulnerabilities
             </p>
           </div>
-          <Button onClick={navigateToCreateTicket}>
-            <Plus className="mr-2 h-4 w-4" /> Create Ticket
-          </Button>
+          <div className="flex space-x-3">
+            <Button variant="outline" onClick={navigateToAnalytics}>
+              <BarChart3 className="mr-2 h-4 w-4" /> Analytics
+            </Button>
+            <Button onClick={navigateToCreateTicket}>
+              <Plus className="mr-2 h-4 w-4" /> Create Ticket
+            </Button>
+          </div>
         </div>
 
         <Tabs 
