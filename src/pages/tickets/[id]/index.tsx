@@ -9,7 +9,9 @@ const TicketPage = () => {
   
   return (
     <AppLayout>
-      <TicketDetails />
+      <div className="container mx-auto py-6">
+        <TicketDetails />
+      </div>
     </AppLayout>
   );
 };

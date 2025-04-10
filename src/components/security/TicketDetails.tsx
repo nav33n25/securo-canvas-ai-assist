@@ -1,481 +1,625 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/components/ui/use-toast';
+import { format, formatDistanceToNow } from 'date-fns';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useUsers } from '@/hooks/useUsers';
+import TicketActivity from './TicketActivity';
+import TicketComments from './TicketComments';
 import {
   AlertTriangle,
   ArrowLeft,
-  CheckCircle2,
   Clock,
-  ClipboardEdit,
+  Edit,
   FileText,
-  LinkIcon,
+  Link as LinkIcon,
   MessageSquare,
-  PaperclipIcon,
-  Shield,
-  User,
-  Calendar,
-  AlertCircle
+  Tag,
+  Users,
 } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
-import { SecurityTicket, TicketStatus, TicketPriority } from '@/types/usoh';
-import { useAuth } from '@/hooks/useAuth';
-
-interface CommentType {
-  id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-    avatar_url?: string;
-  };
-}
-
-const getInitials = (firstName?: string, lastName?: string) => {
-  if (!firstName && !lastName) return 'U';
-  return `${firstName?.[0] || ''}${lastName?.[0] || ''}`;
-};
-
-const TicketPriorityBadge = ({ priority }: { priority: TicketPriority }) => {
-  const priorityStyles = {
-    'critical': 'bg-red-600',
-    'high': 'bg-orange-500',
-    'medium': 'bg-yellow-500 text-black',
-    'low': 'bg-blue-500'
-  };
-
-  return <Badge className={priorityStyles[priority] || 'bg-gray-500'}>{priority}</Badge>;
-};
-
-const TicketStatusBadge = ({ status }: { status: TicketStatus }) => {
-  switch (status) {
-    case 'open':
-      return <Badge variant="outline" className="border-blue-500 text-blue-500"><AlertCircle className="h-3 w-3 mr-1" /> Open</Badge>;
-    case 'in_progress':
-      return <Badge variant="outline" className="border-yellow-500 text-yellow-500"><Clock className="h-3 w-3 mr-1" /> In Progress</Badge>;
-    case 'review':
-      return <Badge variant="outline" className="border-purple-500 text-purple-500"><ClipboardEdit className="h-3 w-3 mr-1" /> Review</Badge>;
-    case 'closed':
-      return <Badge variant="outline" className="border-green-500 text-green-500"><CheckCircle2 className="h-3 w-3 mr-1" /> Closed</Badge>;
-    default:
-      return <Badge variant="outline">{status}</Badge>;
-  }
-};
+import { Link } from 'react-router-dom';
+import { SecurityTicket } from '@/types/common';
 
 const TicketDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('details');
-  const [newComment, setNewComment] = useState('');
+  const { users } = useUsers();
+  const [ticket, setTicket] = useState<SecurityTicket | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [editedTicket, setEditedTicket] = useState<Partial<SecurityTicket>>({});
 
-  // Mock data for development - will be replaced with actual API call
-  const { data: ticket, isLoading, error } = useQuery({
-    queryKey: ['ticket', id],
-    queryFn: async () => {
-      // This would be replaced with an actual API call
-      return {
-        id: id || '1',
-        title: 'Critical XSS Vulnerability in User Profile',
-        description: 'A stored XSS vulnerability was discovered in the user profile page that allows attackers to inject malicious JavaScript. This could lead to session hijacking and data theft.',
-        status: 'in_progress' as TicketStatus,
-        priority: 'high' as TicketPriority,
-        assignee_id: '123',
-        reporter_id: '456',
-        created_at: '2023-10-15T09:00:00Z',
-        updated_at: '2023-10-16T14:30:00Z',
-        due_date: '2023-10-20T23:59:59Z',
-        labels: ['web', 'vulnerability', 'XSS'],
-        ticket_type: 'vulnerability',
-        assignee: {
-          id: '123',
-          first_name: 'Jane',
-          last_name: 'Smith',
-          avatar_url: null
-        },
-        reporter: {
-          id: '456',
-          first_name: 'John',
-          last_name: 'Doe',
-          avatar_url: null
-        },
-        team: {
-          id: '789',
-          name: 'Web Security Team'
+  useEffect(() => {
+    const fetchTicket = async () => {
+      if (!id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('security_tickets')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (error) throw error;
+        
+        setTicket(data);
+        setEditedTicket(data);
+      } catch (error) {
+        console.error('Error fetching ticket:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load ticket details',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTicket();
+
+    // Set up real-time subscription for ticket updates
+    const channel = supabase
+      .channel(`ticket-${id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'security_tickets',
+        filter: `id=eq.${id}`,
+      }, (payload) => {
+        if (payload.eventType === 'UPDATE') {
+          setTicket(payload.new as SecurityTicket);
+          setEditedTicket(payload.new as SecurityTicket);
+        } else if (payload.eventType === 'DELETE') {
+          navigate('/ticketing');
+          toast({
+            title: 'Ticket Deleted',
+            description: 'This ticket has been deleted',
+          });
         }
-      } as SecurityTicket;
-    },
-    enabled: !!id
-  });
+      })
+      .subscribe();
 
-  // Mock comments data
-  const comments: CommentType[] = [
-    {
-      id: '1',
-      user_id: '456',
-      content: 'I discovered this vulnerability while testing the new profile picture upload feature.',
-      created_at: '2023-10-15T09:30:00Z',
-      user: {
-        first_name: 'John',
-        last_name: 'Doe',
-        avatar_url: null
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, navigate]);
+
+  const handleSaveChanges = async () => {
+    if (!ticket || !user) return;
+    
+    try {
+      const changes: Record<string, { old: any; new: any }> = {};
+      for (const [key, value] of Object.entries(editedTicket)) {
+        if (key in ticket && ticket[key as keyof SecurityTicket] !== value) {
+          changes[key] = {
+            old: ticket[key as keyof SecurityTicket],
+            new: value,
+          };
+        }
       }
-    },
-    {
-      id: '2',
-      user_id: '123',
-      content: "I've reproduced the issue and started working on a fix. We'll need to implement better input sanitization.",
-      created_at: '2023-10-16T11:45:00Z',
-      user: {
-        first_name: 'Jane',
-        last_name: 'Smith',
-        avatar_url: null
-      }
+
+      const { error } = await supabase
+        .from('security_tickets')
+        .update(editedTicket)
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Add activity log for the changes
+      const activityPromises = Object.entries(changes).map(([field, change]) => {
+        let activityType: string;
+        let details: any = { field, old_value: change.old, new_value: change.new };
+        
+        switch (field) {
+          case 'status':
+            activityType = 'status_changed';
+            break;
+          case 'assignee_id':
+            activityType = 'assigned';
+            details.assignee_id = change.new;
+            break;
+          case 'priority':
+            activityType = 'priority_changed';
+            break;
+          default:
+            activityType = 'updated';
+        }
+        
+        return supabase
+          .from('ticket_activities')
+          .insert({
+            ticket_id: id,
+            user_id: user.id,
+            activity_type: activityType,
+            details,
+          });
+      });
+      
+      await Promise.all(activityPromises);
+      
+      setEditMode(false);
+      toast({
+        title: 'Success',
+        description: 'Ticket updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update ticket',
+        variant: 'destructive',
+      });
     }
-  ];
-
-  const handleSubmitComment = () => {
-    if (!newComment.trim()) return;
-    
-    // In a real implementation, this would call an API to save the comment
-    toast({
-      title: "Comment added",
-      description: "Your comment has been added to the ticket."
-    });
-    
-    setNewComment('');
   };
 
-  const handleStatusChange = (newStatus: TicketStatus) => {
-    // This would update the ticket status via API
-    toast({
-      title: "Status updated",
-      description: `Ticket status changed to ${newStatus}`
-    });
+  const handleDelete = async () => {
+    if (!id || !user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('security_tickets')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      navigate('/ticketing');
+      toast({
+        title: 'Success',
+        description: 'Ticket deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting ticket:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete ticket',
+        variant: 'destructive',
+      });
+    }
   };
 
-  if (isLoading) {
+  const getUserName = (userId: string | null) => {
+    if (!userId) return 'Unassigned';
+    const user = users.find(u => u.id === userId);
+    return user ? `${user.first_name} ${user.last_name}` : 'Unknown user';
+  };
+
+  const getUserInitials = (userId: string | null) => {
+    if (!userId) return 'NA';
+    const user = users.find(u => u.id === userId);
+    if (!user) return 'UN';
+    return `${user.first_name?.charAt(0) || ''}${user.last_name?.charAt(0) || ''}`;
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'open':
+        return 'default';
+      case 'in_progress':
+        return 'secondary';
+      case 'resolved':
+        return 'success';
+      case 'closed':
+        return 'outline';
+      default:
+        return 'default';
+    }
+  };
+
+  const getPriorityBadgeVariant = (priority: string) => {
+    switch (priority) {
+      case 'low':
+        return 'secondary';
+      case 'medium':
+        return 'default';
+      case 'high':
+        return 'warning';
+      case 'critical':
+        return 'destructive';
+      default:
+        return 'default';
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secure"></div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/ticketing')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Tickets
+          </Button>
+          <Skeleton className="h-8 w-1/3" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-8 w-1/3 mb-2" />
+                <Skeleton className="h-4 w-1/4" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-40 w-full" />
+              </CardContent>
+            </Card>
+          </div>
+          <div>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-1/2" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (error || !ticket) {
+  if (!ticket) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-xl font-semibold mb-2">Error Loading Ticket</h3>
-        <p className="text-muted-foreground mb-4">
-          We couldn't load the requested ticket. It may not exist or you don't have permission to view it.
-        </p>
-        <Button onClick={() => navigate('/ticketing')}>Return to Tickets</Button>
-      </div>
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Ticket not found. It may have been deleted or you don't have permission to view it.
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => navigate('/ticketing')}
+          >
+            Return to Tickets
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/ticketing')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Shield className="h-6 w-6 text-secure" />
-              Ticket #{id}
-            </h1>
-            <p className="text-muted-foreground">
-              Viewing security ticket details
-            </p>
-          </div>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/ticketing')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Tickets
+        </Button>
+        
+        <h1 className="text-3xl font-bold tracking-tight">{ticket.title}</h1>
+        
         <div className="flex gap-2">
-          <Link to={`/tickets/${id}/edit`} className="inline-flex">
-            <Button variant="outline">
-              <ClipboardEdit className="h-4 w-4 mr-2" />
-              Edit Ticket
-            </Button>
-          </Link>
-          <Button className="bg-secure hover:bg-secure-darker">
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
+          {!editMode ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditMode(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    Delete
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete Ticket</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to delete this ticket? This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => {}}>
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleDelete}>
+                      Delete
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveChanges}>
+                Save Changes
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <TicketPriorityBadge priority={ticket.priority} />
-                    <TicketStatusBadge status={ticket.status} />
-                  </div>
-                  <CardTitle className="text-xl">{ticket.title}</CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="comments">Comments ({comments.length})</TabsTrigger>
-                  <TabsTrigger value="activity">Activity</TabsTrigger>
-                  <TabsTrigger value="attachments">Attachments</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="details" className="space-y-4">
-                  <div className="p-4 bg-muted/30 rounded-md">
-                    <h3 className="font-medium mb-2">Description</h3>
-                    <p className="whitespace-pre-line text-sm">{ticket.description}</p>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {ticket.labels?.map((label, index) => (
-                      <Badge key={index} variant="secondary">{label}</Badge>
-                    ))}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Ticket Type</h3>
-                      <div className="flex items-center">
-                        <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
-                        <span className="capitalize">{ticket.ticket_type}</span>
+        <div className="lg:col-span-2">
+          <Tabs defaultValue="details">
+            <TabsList>
+              <TabsTrigger value="details">
+                <FileText className="h-4 w-4 mr-2" />
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="activity">
+                <Clock className="h-4 w-4 mr-2" />
+                Activity
+              </TabsTrigger>
+              <TabsTrigger value="comments">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Comments
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="mt-4">
+              <Card>
+                <CardContent className="pt-6">
+                  {editMode ? (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="title">Title</Label>
+                        <Input
+                          id="title"
+                          value={editedTicket.title || ''}
+                          onChange={(e) => setEditedTicket({...editedTicket, title: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={editedTicket.description || ''}
+                          onChange={(e) => setEditedTicket({...editedTicket, description: e.target.value})}
+                          className="min-h-[200px]"
+                        />
                       </div>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
-                      <div className="flex items-center">
-                        <TicketStatusBadge status={ticket.status} />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Priority</h3>
-                      <div className="flex items-center">
-                        <TicketPriorityBadge priority={ticket.priority} />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Created</h3>
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {new Date(ticket.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Due Date</h3>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-2" />
-                        {ticket.due_date ? new Date(ticket.due_date).toLocaleDateString() : 'No due date'}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Team</h3>
-                      <div className="flex items-center">
-                        <Shield className="h-4 w-4 mr-2" />
-                        {ticket.team?.name || 'Unassigned'}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-4">
-                    <h3 className="font-medium">Status Management</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant={ticket.status === 'open' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('open')}>Open</Button>
-                      <Button variant={ticket.status === 'in_progress' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('in_progress')}>In Progress</Button>
-                      <Button variant={ticket.status === 'review' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('review')}>Review</Button>
-                      <Button variant={ticket.status === 'closed' ? 'default' : 'outline'} size="sm" onClick={() => handleStatusChange('closed')}>Close</Button>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="comments" className="space-y-4">
-                  <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="bg-muted/30 rounded-md p-4">
-                        <div className="flex items-start space-x-4">
-                          <Avatar>
-                            <AvatarImage src={comment.user?.avatar_url || ''} />
-                            <AvatarFallback>{getInitials(comment.user?.first_name, comment.user?.last_name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium">{comment.user?.first_name} {comment.user?.last_name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(comment.created_at).toLocaleString()}
-                              </div>
-                            </div>
-                            <div className="text-sm whitespace-pre-line">
-                              {comment.content}
-                            </div>
-                          </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <h3 className="font-medium text-sm text-muted-foreground">Description</h3>
+                        <div className="text-sm whitespace-pre-wrap">
+                          {ticket.description || 'No description provided.'}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <Textarea 
-                      placeholder="Add a comment..." 
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                    />
-                    <Button onClick={handleSubmitComment} disabled={!newComment.trim()}>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Add Comment
-                    </Button>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="activity" className="space-y-4">
-                  <div className="text-center py-8">
-                    <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Activity Timeline</h3>
-                    <p className="text-muted-foreground">
-                      The complete activity history for this ticket will be displayed here.
-                    </p>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="attachments" className="space-y-4">
-                  <div className="text-center py-8">
-                    <PaperclipIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Attachments</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Upload and manage evidence files related to this security issue.
-                    </p>
-                    <Button>
-                      <PaperclipIcon className="h-4 w-4 mr-2" />
-                      Upload Attachment
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="activity" className="mt-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <TicketActivity ticketId={id || ''} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="comments" className="mt-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <TicketComments ticketId={id || ''} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
-        
-        <div className="space-y-6">
+
+        <div>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Assigned To</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={ticket.assignee?.avatar_url || ''} />
-                  <AvatarFallback>{getInitials(ticket.assignee?.first_name, ticket.assignee?.last_name)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium">
-                    {ticket.assignee ? `${ticket.assignee.first_name} ${ticket.assignee.last_name}` : 'Unassigned'}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {ticket.assignee ? 'Security Analyst' : 'Not assigned yet'}
-                  </div>
-                </div>
-              </div>
-              {!ticket.assignee && (
-                <Button variant="outline" className="mt-4 w-full">
-                  <User className="h-4 w-4 mr-2" />
-                  Assign Ticket
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Reported By</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={ticket.reporter?.avatar_url || ''} />
-                  <AvatarFallback>{getInitials(ticket.reporter?.first_name, ticket.reporter?.last_name)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium">
-                    {ticket.reporter ? `${ticket.reporter.first_name} ${ticket.reporter.last_name}` : 'System'}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(ticket.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Related Items</CardTitle>
+              <CardTitle>Ticket Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium mb-2">Linked Documents</h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  <span>No documents linked yet</span>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
+                {editMode ? (
+                  <Select
+                    value={editedTicket.status || ''}
+                    onValueChange={(value) => setEditedTicket({...editedTicket, status: value as any})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                    {ticket.status === 'in_progress' ? 'In Progress' : 
+                      ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
+                  </Badge>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Priority</h3>
+                {editMode ? (
+                  <Select
+                    value={editedTicket.priority || ''}
+                    onValueChange={(value) => setEditedTicket({...editedTicket, priority: value as any})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="critical">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
+                    {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                  </Badge>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Category</h3>
+                {editMode ? (
+                  <Select
+                    value={editedTicket.category || ''}
+                    onValueChange={(value) => setEditedTicket({...editedTicket, category: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bug">Bug</SelectItem>
+                      <SelectItem value="feature">Feature Request</SelectItem>
+                      <SelectItem value="incident">Security Incident</SelectItem>
+                      <SelectItem value="vulnerability">Vulnerability</SelectItem>
+                      <SelectItem value="compliance">Compliance Issue</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center">
+                    <Tag className="h-4 w-4 mr-2" />
+                    <span>
+                      {ticket.category === 'bug' ? 'Bug' : 
+                       ticket.category === 'feature' ? 'Feature Request' :
+                       ticket.category === 'incident' ? 'Security Incident' :
+                       ticket.category === 'vulnerability' ? 'Vulnerability' :
+                       ticket.category === 'compliance' ? 'Compliance Issue' : 'Other'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Assignee</h3>
+                {editMode ? (
+                  <Select
+                    value={editedTicket.assignee_id || ''}
+                    onValueChange={(value) => setEditedTicket({...editedTicket, assignee_id: value || null})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {`${user.first_name} ${user.last_name}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={`/api/avatar?userId=${ticket.assignee_id}`} />
+                      <AvatarFallback>{getUserInitials(ticket.assignee_id)}</AvatarFallback>
+                    </Avatar>
+                    <span>{getUserName(ticket.assignee_id)}</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Reporter</h3>
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={`/api/avatar?userId=${ticket.reporter_id}`} />
+                    <AvatarFallback>{getUserInitials(ticket.reporter_id)}</AvatarFallback>
+                  </Avatar>
+                  <span>{getUserName(ticket.reporter_id)}</span>
                 </div>
-                <Button variant="outline" size="sm" className="mt-2 w-full">
-                  <LinkIcon className="h-3 w-3 mr-2" />
-                  Link Document
-                </Button>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Created</h3>
+                <div className="flex items-center text-sm">
+                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span>{formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}</span>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Last Updated</h3>
+                <div className="flex items-center text-sm">
+                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span>{formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true })}</span>
+                </div>
               </div>
               
               <Separator />
               
-              <div>
-                <h3 className="text-sm font-medium mb-2">CVE References</h3>
-                <div className="space-y-2">
-                  <Badge variant="outline" className="border-red-500 text-red-500">CVE-2021-44228</Badge>
-                </div>
+              <div className="pt-2">
+                <Link to={`/tickets/${id}/edit`} className="w-full">
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Advanced Edit
+                  </Button>
+                </Link>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button className="w-full bg-secure hover:bg-secure-darker">
-                <FileText className="h-4 w-4 mr-2" />
-                Generate Report
-              </Button>
-              <Link to={`/tickets/${id}/edit`} className="inline-flex w-full">
-                <Button variant="outline" className="w-full">
-                  <ClipboardEdit className="h-4 w-4 mr-2" />
-                  Edit Ticket
-                </Button>
-              </Link>
-              <Button variant="secondary" className="w-full">
-                <LinkIcon className="h-4 w-4 mr-2" />
-                Create Related Ticket
-              </Button>
+              
+              <div>
+                <Link to={`/ticketing`} className="w-full">
+                  <Button variant="secondary" size="sm" className="w-full">
+                    <LinkIcon className="h-4 w-4 mr-2" />
+                    View All Tickets
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>
