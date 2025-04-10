@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import Link from "next/link";
+import { useRouter } from "@/lib/next-compatibility/router";
+import { Link } from "react-router-dom";
 import { 
   ArrowLeft, 
   Loader2, 
@@ -283,7 +283,7 @@ export default function TicketDetailPage() {
                     <p className="text-sm font-medium">Created By</p>
                     <p className="text-sm text-muted-foreground">
                       {/* We would typically display the user's name here */}
-                      User ID: {ticket.created_by}
+                      User ID: {ticket.reporter_id}
                     </p>
                   </div>
                 </div>

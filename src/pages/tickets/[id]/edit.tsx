@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import Link from "next/link";
+import { useRouter } from "@/lib/next-compatibility/router";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -61,7 +61,7 @@ export default function EditTicketPage() {
         <div className="container mx-auto py-6 space-y-6">
           <div className="flex items-center gap-2 mb-6">
             <Button variant="ghost" size="sm" asChild className="gap-1">
-              <Link href="/tickets">
+              <Link to="/tickets">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Tickets
               </Link>
@@ -75,7 +75,7 @@ export default function EditTicketPage() {
             </p>
             <div className="flex justify-center mt-4">
               <Button asChild>
-                <Link href="/tickets">View All Tickets</Link>
+                <Link to="/tickets">View All Tickets</Link>
               </Button>
             </div>
           </div>
@@ -89,7 +89,7 @@ export default function EditTicketPage() {
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center gap-2 mb-6">
           <Button variant="ghost" size="sm" asChild className="gap-1">
-            <Link href={`/tickets/${ticket.id}`}>
+            <Link to={`/tickets/${ticket.id}`}>
               <ArrowLeft className="h-4 w-4" />
               Back to Ticket
             </Link>
