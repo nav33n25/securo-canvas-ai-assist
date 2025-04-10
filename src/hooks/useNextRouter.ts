@@ -1,3 +1,4 @@
+
 import { useNavigate, useLocation, useParams as useReactRouterParams } from 'react-router-dom';
 
 export function useRouter() {
@@ -10,8 +11,8 @@ export function useRouter() {
     pathname: location.pathname,
     query: Object.fromEntries(new URLSearchParams(location.search)),
     asPath: location.pathname + location.search,
-    back: () => navigate("-1"),
-    forward: () => navigate("1"),
+    back: () => navigate(-1), // Use number -1 instead of string "-1"
+    forward: () => navigate(1), // Use number 1 instead of string "1"
   };
 }
 

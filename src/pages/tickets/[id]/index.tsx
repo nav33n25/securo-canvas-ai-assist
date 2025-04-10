@@ -1,22 +1,34 @@
+
 import { useState, useEffect } from "react";
 import { useRouter } from "@/lib/next-compatibility/router";
 import { Link } from "react-router-dom";
-import { 
-  ArrowLeft, 
-  Loader2, 
-  Edit, 
-  Trash2, 
-  AlertTriangle, 
-  Clock, 
-  User, 
-  Calendar 
+import { format } from "date-fns";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  Edit,
+  FileText,
+  MessageCircle,
+  Trash2,
+  User,
+  AlertTriangle,
+  MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -27,49 +39,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useTickets, Ticket } from "@/hooks/useTickets";
+import { useTickets } from "@/hooks/useTickets";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/hooks/useUser";
+import { SecurityTicket } from "@/types/common";
 
-// Status and priority color mappings
-const statusColors = {
-  new: "bg-blue-500",
-  in_progress: "bg-yellow-500",
-  in_review: "bg-purple-500",
-  closed: "bg-green-500"
-};
-
-const priorityColors = {
-  low: "bg-gray-500",
-  medium: "bg-blue-500",
-  high: "bg-orange-500",
-  urgent: "bg-red-500"
-};
-
-const statusLabels = {
-  new: "New",
-  in_progress: "In Progress",
-  in_review: "In Review",
-  closed: "Closed"
-};
-
-const priorityLabels = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  urgent: "Urgent"
-};
-
-export default function TicketDetailPage() {
+export default function TicketPage() {
   const router = useRouter();
   const { id } = router.query;
   const { getTicketById, deleteTicket } = useTickets();
   const { toast } = useToast();
-  const { user } = useUser();
-  const [ticket, setTicket] = useState<Ticket | null>(null);
+
+  const [ticket, setTicket] = useState<SecurityTicket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     async function fetchTicket() {
@@ -97,20 +80,20 @@ export default function TicketDetailPage() {
 
   const handleDelete = async () => {
     if (!ticket) return;
-    
+
     setIsDeleting(true);
     try {
       await deleteTicket(ticket.id);
       toast({
         title: "Success",
-        description: "Ticket deleted successfully",
+        description: "Ticket deleted successfully.",
       });
       router.push("/tickets");
     } catch (error) {
       console.error("Error deleting ticket:", error);
       toast({
         title: "Error",
-        description: "Failed to delete ticket. Please try again.",
+        description: "Failed to delete the ticket. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -118,8 +101,36 @@ export default function TicketDetailPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const renderPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case "low":
+        return <Badge variant="outline">Low</Badge>;
+      case "medium":
+        return <Badge>Medium</Badge>;
+      case "high":
+        return <Badge variant="destructive">High</Badge>;
+      case "critical":
+        return <Badge className="bg-red-500">Critical</Badge>;
+      default:
+        return <Badge variant="outline">{priority}</Badge>;
+    }
+  };
+
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case "open":
+        return <Badge variant="outline">Open</Badge>;
+      case "in_progress":
+        return <Badge className="bg-blue-500">In Progress</Badge>;
+      case "review":
+        return <Badge className="bg-yellow-500">In Review</Badge>;
+      case "resolved":
+        return <Badge className="bg-green-500">Resolved</Badge>;
+      case "closed":
+        return <Badge variant="secondary">Closed</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
   if (isLoading) {
@@ -141,7 +152,7 @@ export default function TicketDetailPage() {
         <div className="container mx-auto py-6 space-y-6">
           <div className="flex items-center gap-2 mb-6">
             <Button variant="ghost" size="sm" asChild className="gap-1">
-              <Link href="/tickets">
+              <Link to="/tickets">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Tickets
               </Link>
@@ -155,7 +166,7 @@ export default function TicketDetailPage() {
             </p>
             <div className="flex justify-center mt-4">
               <Button asChild>
-                <Link href="/tickets">View All Tickets</Link>
+                <Link to="/tickets">View All Tickets</Link>
               </Button>
             </div>
           </div>
@@ -169,142 +180,201 @@ export default function TicketDetailPage() {
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" asChild className="gap-1">
-            <Link href="/tickets">
+            <Link to="/tickets">
               <ArrowLeft className="h-4 w-4" />
               Back to Tickets
             </Link>
           </Button>
 
-          <div className="flex gap-2">
-            <Button 
+          <div className="flex items-center gap-2">
+            <Button
               variant="outline"
               size="sm"
               asChild
+              className="gap-1"
             >
-              <Link href={`/tickets/${ticket.id}/edit`}>
-                <Edit className="h-4 w-4 mr-1" />
-                Edit
+              <Link to={`/tickets/${ticket.id}/edit`}>
+                <Edit className="h-4 w-4" />
+                Edit Ticket
               </Link>
             </Button>
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="h-4 w-4 mr-1" />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1"
+                >
+                  <Trash2 className="h-4 w-4" />
                   Delete
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action will permanently delete this ticket and cannot be undone.
+                    This action cannot be undone. This will permanently delete
+                    the ticket and all associated data.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
+                  <AlertDialogAction
                     onClick={handleDelete}
                     disabled={isDeleting}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    className="bg-destructive hover:bg-destructive/90"
                   >
-                    {isDeleting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      "Delete Ticket"
-                    )}
+                    {isDeleting ? "Deleting..." : "Delete Ticket"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to={`/tickets/${ticket.id}/edit`}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  <AlertDialog>
+                    <AlertDialogTrigger className="flex items-center">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently
+                          delete the ticket and all associated data.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          disabled={isDeleting}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          {isDeleting ? "Deleting..." : "Delete Ticket"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-2xl mb-2">{ticket.title}</CardTitle>
-                    <div className="flex gap-2">
-                      <Badge className={`${statusColors[ticket.status]} hover:${statusColors[ticket.status]}`}>
-                        {statusLabels[ticket.status]}
-                      </Badge>
-                      <Badge className={`${priorityColors[ticket.priority]} hover:${priorityColors[ticket.priority]}`}>
-                        {priorityLabels[ticket.priority]}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="prose dark:prose-invert max-w-none mt-4">
-                  <p>{ticket.description}</p>
-                </div>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardTitle className="text-2xl">{ticket.title}</CardTitle>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="outline">#{ticket.id.slice(0, 8)}</Badge>
+                {renderPriorityBadge(ticket.priority)}
+                {renderStatusBadge(ticket.status)}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Description
+              </h3>
+              <div className="rounded-md bg-muted/50 p-4">
+                <p className="whitespace-pre-wrap">
+                  {ticket.description || "No description provided."}
+                </p>
+              </div>
+            </div>
 
-            {/* Comments section can be added here */}
-          </div>
+            <Separator />
 
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Ticket Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Created</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(ticket.created_at)}
+                      {format(new Date(ticket.created_at), "PPP")}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Last Updated</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(ticket.updated_at)}
+                      {format(
+                        new Date(ticket.updated_at || ticket.created_at),
+                        "PPP 'at' p"
+                      )}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                  <User className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Created By</p>
                     <p className="text-sm text-muted-foreground">
-                      {/* We would typically display the user's name here */}
-                      User ID: {ticket.reporter_id}
+                      {ticket.user_id || "System"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Ticket Type</p>
+                    <p className="text-sm text-muted-foreground capitalize">
+                      {ticket.ticket_type || "General"}
                     </p>
                   </div>
                 </div>
 
-                {ticket.assigned_to && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Assigned To</p>
-                      <p className="text-sm text-muted-foreground">
-                        {/* We would typically display the assignee's name here */}
-                        User ID: {ticket.assigned_to}
-                      </p>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Comments</p>
+                    <p className="text-sm text-muted-foreground">
+                      No comments yet
+                    </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Risk Assessment</p>
+                    <p className="text-sm text-muted-foreground">
+                      Not assessed yet
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );
-} 
+}
