@@ -31,10 +31,15 @@ export interface SecurityTicket {
   assigned_to?: string | null; // Alias for assignee_id for backward compatibility
   labels?: string[];
   team_id?: string;
+  assignee?: string; // Added for compatibility with components
+  created_by?: string; // Added for compatibility with components
+  related_assets?: string[]; // Added for compatibility with components
+  related_cves?: string[]; // Added for compatibility with components
 }
 
-export type TicketStatus = 'open' | 'in_progress' | 'review' | 'resolved' | 'closed';
-export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
+// Update the enums to match the string values used in the components
+export type TicketStatus = 'open' | 'in_progress' | 'review' | 'resolved' | 'closed' | 'Open' | 'In Progress' | 'Pending' | 'Resolved' | 'Closed';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'critical' | 'Low' | 'Medium' | 'High' | 'Critical';
 
 export interface TicketCreateData {
   title: string;
@@ -67,3 +72,41 @@ export interface TicketActivity {
 }
 
 export type IconType = React.ComponentType<{ className?: string }>;
+
+// Add additional types that are referenced in the components
+export interface RedTeamOperation {
+  id: string;
+  name: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  description: string;
+  team_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  techniques: string[];
+  targets: string[];
+  severity: string;
+}
+
+export interface CveEntry {
+  id: string;
+  cve_id: string;
+  description: string;
+  severity: string;
+  published_date: string;
+  updated_date: string;
+  status: string;
+  affected_systems: string[];
+  references: string[];
+  mitigation: string;
+}
+
+// Fix the ticket analytics function for proper date handling
+export const parseTicketDate = (dateString: string | Date): Date => {
+  if (dateString instanceof Date) {
+    return dateString;
+  }
+  return new Date(dateString);
+};
