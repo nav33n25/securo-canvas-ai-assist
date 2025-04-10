@@ -12,7 +12,7 @@ export function useRouter() {
     pathname: location.pathname,
     query: { ...params, ...Object.fromEntries(new URLSearchParams(location.search)) },
     asPath: location.pathname + location.search,
-    back: () => navigate(-1), // Use number -1 instead of string "-1"
+    back: () => navigate(-1), // This is correct - navigate accepts a number
     prefetch: (href: string) => {
       // This is just a stub - React Router doesn't have a direct equivalent
       console.log('Prefetch stub for:', href);

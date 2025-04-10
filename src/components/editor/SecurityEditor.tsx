@@ -115,7 +115,7 @@ Timeline:
       type: 'doc', 
       content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }] 
     },
-    onUpdate: ({ editor }) => {
+    onUpdate: (editor: any) => {
       // Get JSON content from editor
       const json = editor.getJSON();
       handleContentChange(json);
@@ -147,7 +147,7 @@ Timeline:
         <div className="flex items-center gap-2 text-secure">
           <Shield className="h-6 w-6" />
           <h1 className="text-2xl font-semibold truncate max-w-[200px] sm:max-w-xs md:max-w-md">{title}</h1>
-          <Lock className="h-4 w-4 text-orange-500" title="Security document" />
+          <Lock className="h-4 w-4 text-orange-500" aria-label="Security document" />
         </div>
         
         <div className="flex gap-2 items-center flex-wrap">

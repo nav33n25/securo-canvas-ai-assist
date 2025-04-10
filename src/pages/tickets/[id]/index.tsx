@@ -1,380 +1,367 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { format } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Calendar, Clock, User, Shield, MessageSquare, History } from 'lucide-react';
+import AppLayout from '@/components/layout/AppLayout'; // Using AppLayout directly
+import TicketActivity from '@/components/security/TicketActivity';
+import TicketComments from '@/components/security/TicketComments';
+import UpdateTicketModal from '@/components/security/UpdateTicketModal';
+import { SecurityTicket } from '@/types/common';
+import { useUsers } from '@/hooks/useUsers';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "@/lib/next-compatibility/router";
-import { Link } from "react-router-dom";
-import { format } from "date-fns";
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  Edit,
-  FileText,
-  MessageCircle,
-  Trash2,
-  User,
-  AlertTriangle,
-  MoreHorizontal,
-  Loader2,
-} from "lucide-react";
+// Constants for ticket status and priority
+const TICKET_STATUS = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  review: 'In Review',
+  resolved: 'Resolved',
+  closed: 'Closed'
+};
 
-import AppLayout from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useTickets } from "@/hooks/useTickets";
-import { useToast } from "@/hooks/use-toast";
-import { SecurityTicket } from "@/types/common";
+const TICKET_PRIORITY = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  critical: 'Critical'
+};
 
-export default function TicketPage() {
-  const router = useRouter();
-  const { id } = router.query;
-  const { getTicketById, deleteTicket } = useTickets();
-  const { toast } = useToast();
-
+const TicketDetailsPage: React.FC = () => {
+  const params = useParams();
+  const navigate = useNavigate();
+  const ticketId = params.ticketId;
   const [ticket, setTicket] = useState<SecurityTicket | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const { toast } = useToast();
+  const { users } = useUsers();
 
   useEffect(() => {
-    async function fetchTicket() {
-      if (!id || typeof id !== "string") return;
+    if (!ticketId) return;
 
-      setIsLoading(true);
+    const fetchTicket = async () => {
       try {
-        const ticketData = await getTicketById(id);
-        setTicket(ticketData);
-      } catch (err) {
-        console.error("Error fetching ticket:", err);
-        setError("Failed to fetch ticket details");
+        const { data, error } = await supabase
+          .from('security_tickets')
+          .select('*')
+          .eq('id', ticketId)
+          .single();
+
+        if (error) throw error;
+        setTicket(data);
+      } catch (error) {
+        console.error('Error fetching ticket:', error);
         toast({
-          title: "Error",
-          description: "Failed to fetch ticket details. Please try again.",
-          variant: "destructive",
+          title: 'Error loading ticket',
+          description: 'Could not load the ticket details. Please try again.',
+          variant: 'destructive',
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
-    }
+    };
 
     fetchTicket();
-  }, [id, getTicketById, toast]);
 
-  const handleDelete = async () => {
-    if (!ticket) return;
+    // Subscribe to ticket updates
+    const subscription = supabase
+      .channel(`ticket-updates:${ticketId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'security_tickets',
+        filter: `id=eq.${ticketId}`,
+      }, (payload) => {
+        setTicket(payload.new as SecurityTicket);
+      })
+      .subscribe();
 
-    setIsDeleting(true);
-    try {
-      await deleteTicket(ticket.id);
-      toast({
-        title: "Success",
-        description: "Ticket deleted successfully.",
-      });
-      router.push("/tickets");
-    } catch (error) {
-      console.error("Error deleting ticket:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete the ticket. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [ticketId, toast]);
 
-  const renderPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case "low":
-        return <Badge variant="outline">Low</Badge>;
-      case "medium":
-        return <Badge>Medium</Badge>;
-      case "high":
-        return <Badge variant="destructive">High</Badge>;
-      case "critical":
-        return <Badge className="bg-red-500">Critical</Badge>;
-      default:
-        return <Badge variant="outline">{priority}</Badge>;
-    }
-  };
-
-  const renderStatusBadge = (status: string) => {
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case "open":
-        return <Badge variant="outline">Open</Badge>;
-      case "in_progress":
-        return <Badge className="bg-blue-500">In Progress</Badge>;
-      case "review":
-        return <Badge className="bg-yellow-500">In Review</Badge>;
-      case "resolved":
-        return <Badge className="bg-green-500">Resolved</Badge>;
-      case "closed":
-        return <Badge variant="secondary">Closed</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+      case 'open': return 'default';
+      case 'in_progress': return 'secondary';
+      case 'resolved': return 'secondary'; // Changed from 'success'
+      case 'closed': return 'outline';
+      default: return 'default';
     }
   };
 
-  if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto py-6 flex items-center justify-center h-[70vh]">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Loading ticket details...</p>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
+  const getPriorityBadgeVariant = (priority: string) => {
+    switch (priority) {
+      case 'low': return 'secondary';
+      case 'medium': return 'default';
+      case 'high': return 'destructive'; // Changed from 'warning'
+      case 'critical': return 'destructive';
+      default: return 'default';
+    }
+  };
 
-  if (error || !ticket) {
+  const getReporterName = (reporterId: string) => {
+    const user = users.find(u => u.id === reporterId);
+    return user ? `${user.first_name} ${user.last_name}` : 'Unknown user';
+  };
+
+  const getAssigneeName = (assigneeId: string | null) => {
+    if (!assigneeId) return 'Unassigned';
+    const user = users.find(u => u.id === assigneeId);
+    return user ? `${user.first_name} ${user.last_name}` : 'Unknown user';
+  };
+
+  if (loading) {
     return (
       <AppLayout>
         <div className="container mx-auto py-6 space-y-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Button variant="ghost" size="sm" asChild className="gap-1">
-              <Link to="/tickets">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Tickets
-              </Link>
+          <div className="flex items-center gap-4 mb-8">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/security')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Tickets
             </Button>
+            <Skeleton className="h-8 w-48" />
           </div>
-
-          <div className="p-6 bg-card rounded-lg border shadow-sm">
-            <h1 className="text-2xl font-bold text-center mb-2">Error</h1>
-            <p className="text-center text-muted-foreground">
-              {error || "Ticket not found"}
-            </p>
-            <div className="flex justify-center mt-4">
-              <Button asChild>
-                <Link to="/tickets">View All Tickets</Link>
-              </Button>
-            </div>
-          </div>
+          
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-8 w-2/3 mb-4" />
+              <Skeleton className="h-5 w-1/3" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-48" />
+                  </div>
+                ))}
+              </div>
+              <Skeleton className="h-32 w-full mt-6" />
+            </CardContent>
+          </Card>
         </div>
       </AppLayout>
     );
   }
+
+  if (!ticket) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto py-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/security')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Tickets
+          </Button>
+          <Card className="mt-6">
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Ticket not found or you don't have permission to view it.</p>
+                <Button variant="outline" className="mt-4" onClick={() => navigate('/security')}>
+                  Return to Security Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Example state for demonstration
+  const [num1, setNum1] = useState('');
+  const [num2, setNum2] = useState('');
+  const [operation, setOperation] = useState('add');
+  const [result, setResult] = useState(0);
+
+  // Example function to perform a calculation
+  const calculateResult = (num1: number, num2: number, operation: string): number => {
+    switch (operation) {
+      case 'add':
+        return num1 + num2;
+      case 'subtract':
+        return num1 - num2;
+      case 'multiply':
+        return num1 * num2;
+      case 'divide':
+        return num1 / num2;
+      default:
+        return 0;
+    }
+  };
+
+  // Handler for calculation
+  const handleCalculate = () => {
+    if (!num1 || !num2) {
+      toast({
+        title: 'Error',
+        description: 'Please enter both numbers',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const calculatedResult = calculateResult(Number(num1), Number(num2), operation);
+      setResult(calculatedResult);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to perform calculation',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Find and fix the problematic line by using a property that exists on SecurityTicket
+  // In this case, we'll use reporter_id instead of user_id
+  const handleDelete = async () => {
+    if (!ticketId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('security_tickets')
+        .delete()
+        .eq('id', ticketId);
+      
+      if (error) throw error;
+      
+      navigate('/security');
+      toast({
+        title: 'Success',
+        description: 'Ticket deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting ticket:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete ticket',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <AppLayout>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" asChild className="gap-1">
-            <Link to="/tickets">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Tickets
-            </Link>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/security')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Tickets
           </Button>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="gap-1"
-            >
-              <Link to={`/tickets/${ticket.id}/edit`}>
-                <Edit className="h-4 w-4" />
-                Edit Ticket
-              </Link>
-            </Button>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    the ticket and all associated data.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="bg-destructive hover:bg-destructive/90"
-                  >
-                    {isDeleting ? "Deleting..." : "Delete Ticket"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link to={`/tickets/${ticket.id}/edit`}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onSelect={(e) => e.preventDefault()}
-                >
-                  <AlertDialog>
-                    <AlertDialogTrigger className="flex items-center">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently
-                          delete the ticket and all associated data.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDelete}
-                          disabled={isDeleting}
-                          className="bg-destructive hover:bg-destructive/90"
-                        >
-                          {isDeleting ? "Deleting..." : "Delete Ticket"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Button onClick={() => setShowUpdateModal(true)}>
+            Update Ticket
+          </Button>
         </div>
 
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between">
-            <div>
-              <CardTitle className="text-2xl">{ticket.title}</CardTitle>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline">#{ticket.id.slice(0, 8)}</Badge>
-                {renderPriorityBadge(ticket.priority)}
-                {renderStatusBadge(ticket.status)}
-              </div>
+          <CardHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                {TICKET_STATUS[ticket.status as keyof typeof TICKET_STATUS]}
+              </Badge>
+              <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
+                {TICKET_PRIORITY[ticket.priority as keyof typeof TICKET_PRIORITY]}
+              </Badge>
+              {ticket.category && (
+                <Badge variant="outline">{ticket.category}</Badge>
+              )}
             </div>
+            <CardTitle className="text-2xl">{ticket.title}</CardTitle>
+            <CardDescription>Ticket ID: {ticket.id}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium text-muted-foreground">
-                Description
-              </h3>
-              <div className="rounded-md bg-muted/50 p-4">
-                <p className="whitespace-pre-wrap">
-                  {ticket.description || "No description provided."}
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  Reported By
+                </p>
+                <p className="font-medium">
+                  {getReporterName(ticket.reporter_id)}
+                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Assigned To
+                </p>
+                <p className="font-medium">
+                  {getAssigneeName(ticket.assignee_id)}
+                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Created
+                </p>
+                <p className="font-medium">
+                  {format(new Date(ticket.created_at), 'PPP')}
+                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Last Updated
+                </p>
+                <p className="font-medium">
+                  {format(new Date(ticket.updated_at), 'PPP')}
                 </p>
               </div>
             </div>
-
-            <Separator />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Created</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(ticket.created_at), "PPP")}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Last Updated</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(
-                        new Date(ticket.updated_at || ticket.created_at),
-                        "PPP 'at' p"
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Created By</p>
-                    <p className="text-sm text-muted-foreground">
-                      {ticket.user_id || "System"}
-                    </p>
-                  </div>
-                </div>
+            
+            <div className="mt-6">
+              <h3 className="text-lg font-medium mb-3">Description</h3>
+              <div className="bg-muted/50 p-4 rounded-md whitespace-pre-wrap text-sm">
+                {ticket.description || 'No description provided.'}
               </div>
+            </div>
 
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Ticket Type</p>
-                    <p className="text-sm text-muted-foreground capitalize">
-                      {ticket.ticket_type || "General"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Comments</p>
-                    <p className="text-sm text-muted-foreground">
-                      No comments yet
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Risk Assessment</p>
-                    <p className="text-sm text-muted-foreground">
-                      Not assessed yet
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-8">
+              <Tabs defaultValue="comments">
+                <TabsList>
+                  <TabsTrigger value="comments" className="flex items-center">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Comments
+                  </TabsTrigger>
+                  <TabsTrigger value="activity" className="flex items-center">
+                    <History className="h-4 w-4 mr-2" />
+                    Activity
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="comments" className="mt-4">
+                  <TicketComments ticketId={ticket.id} />
+                </TabsContent>
+                
+                <TabsContent value="activity" className="mt-4">
+                  <TicketActivity ticketId={ticket.id} />
+                </TabsContent>
+              </Tabs>
             </div>
           </CardContent>
         </Card>
+        
+        {showUpdateModal && (
+          <UpdateTicketModal
+            ticket={ticket}
+            open={showUpdateModal}
+            onClose={() => setShowUpdateModal(false)}
+          />
+        )}
       </div>
     </AppLayout>
   );
-}
+};
+
+export default TicketDetailsPage;

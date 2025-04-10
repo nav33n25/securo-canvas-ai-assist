@@ -11,8 +11,8 @@ export function useRouter() {
     pathname: location.pathname,
     query: Object.fromEntries(new URLSearchParams(location.search)),
     asPath: location.pathname + location.search,
-    back: () => navigate(-1), // Use number -1 instead of string "-1"
-    forward: () => navigate(1), // Use number 1 instead of string "1"
+    back: () => navigate(-1), // This is correct - navigate accepts a number
+    forward: () => navigate(1), // This is correct - navigate accepts a number
   };
 }
 
