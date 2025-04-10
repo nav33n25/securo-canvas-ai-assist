@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { useTickets } from '@/hooks/useTickets';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { SecurityTicket } from '@/types/common';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -18,6 +19,7 @@ const EditTicketPage = () => {
   const [ticket, setTicket] = useState<SecurityTicket | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
   
   useEffect(() => {
     const fetchTicket = async () => {
@@ -41,7 +43,7 @@ const EditTicketPage = () => {
     };
     
     fetchTicket();
-  }, [id, getTicketById]);
+  }, [id, getTicketById, toast]);
   
   const handleUpdateTicket = async (updatedTicket: Partial<SecurityTicket>) => {
     if (!id) return;

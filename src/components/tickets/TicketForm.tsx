@@ -27,11 +27,13 @@ import { TicketStatus, TicketPriority, SecurityTicket } from '@/types/common';
 interface TicketFormProps {
   ticket?: SecurityTicket;
   isEditMode?: boolean;
+  onSubmit?: (data: Partial<SecurityTicket>) => Promise<void>;
 }
 
 const TicketForm: React.FC<TicketFormProps> = ({ 
   ticket,
-  isEditMode = false
+  isEditMode = false,
+  onSubmit
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -60,7 +62,16 @@ const TicketForm: React.FC<TicketFormProps> = ({
     setIsSubmitting(true);
     
     try {
-      if (isEditMode && ticket) {
+      // If onSubmit prop is provided, use it for handling the form submission
+      if (onSubmit) {
+        await onSubmit({
+          title,
+          description,
+          status,
+          priority,
+          ticket_type: ticketType,
+        });
+      } else if (isEditMode && ticket) {
         await updateTicket(ticket.id, {
           title,
           description,
