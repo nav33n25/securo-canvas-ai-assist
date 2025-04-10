@@ -1,6 +1,7 @@
 
 import { useContext } from 'react';
 import { AuthContext } from '@/contexts/AuthContext';
+import { SubscriptionTier, CombinedUserRole } from '@/types/auth-types';
 
 export interface RegisterParams {
   email: string;
@@ -42,8 +43,8 @@ export function useAuth() {
         password: params.password,
         firstName: params.firstName,
         lastName: params.lastName,
-        subscriptionTier: params.subscriptionTier || 'free',
-        role: params.role
+        subscriptionTier: (params.subscriptionTier || 'free') as SubscriptionTier,
+        role: params.role as CombinedUserRole
       });
     },
     resetPassword: (email: string) => {
