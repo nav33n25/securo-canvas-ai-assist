@@ -1,8 +1,5 @@
 // USOH Platform Types - Core type definitions for the Unified Security Operations Hub
 
-// Document sensitivity levels
-export type DocumentSensitivity = 'public' | 'internal' | 'confidential' | 'restricted';
-
 // Enhanced User Role Types
 export type BasicUserRole = 'individual' | 'team_member' | 'team_manager' | 'administrator';
 
@@ -122,90 +119,24 @@ export interface TicketDocumentRelation {
   document?: Document;
 }
 
-// Document activity types
-export type DocumentActivityAction = 
-  'create' | 
-  'update' | 
-  'view' | 
-  'edit' | 
-  'delete' | 
-  'share' | 
-  'upload_image' | 
-  'export' | 
-  'print' | 
-  'ai_generation';
+// Enhanced Document Types
+export type DocumentSensitivity = 'public' | 'internal' | 'confidential' | 'restricted';
 
-// Security compliance frameworks
-export type ComplianceFramework = 
-  'ISO27001' | 
-  'NIST800-53' | 
-  'SOC2' | 
-  'HIPAA' | 
-  'PCI-DSS' | 
-  'GDPR' | 
-  'CCPA';
-
-// Security classifications
-export type SecurityClassification = {
-  sensitivity: DocumentSensitivity;
-  complianceFrameworks?: ComplianceFramework[];
-  retentionPeriod?: number; // In days
-  dataOwner?: string;
-  encryptionRequired?: boolean;
-};
-
-// Document interface with security features
-export interface SecureDocument {
+export interface Document {
   id: string;
   title: string;
   content: any; // Usually JSON content for the editor
-  html_content?: string; // HTML representation
-  user_id: string;
+  user_id?: string;
   team_id?: string;
   is_template: boolean;
-  status: 'draft' | 'review' | 'approved' | 'published' | 'archived';
+  status: string;
   version: number;
   sensitivity: DocumentSensitivity;
-  compliance_frameworks?: ComplianceFramework[];
+  compliance_frameworks?: string[];
+  evidence_ids?: string[];
   mitre_attack_techniques?: string[];
-  last_modified_by?: string;
   created_at: string;
   updated_at: string;
-}
-
-// Document activity logging
-export interface DocumentActivity {
-  id: string;
-  user_id: string;
-  document_id: string;
-  action: DocumentActivityAction;
-  details?: Record<string, any>;
-  created_at: string;
-  ip_address?: string;
-  user_agent?: string;
-}
-
-// AI completions logging
-export interface AICompletion {
-  id: string;
-  user_id: string;
-  prompt_length: number;
-  sensitivity_level: DocumentSensitivity;
-  completion_type?: 'document' | 'chat' | 'code';
-  created_at: string;
-}
-
-// Security audit log
-export interface SecurityAuditLog {
-  id: string;
-  user_id: string;
-  action: string;
-  resource_type: string;
-  resource_id?: string;
-  details?: Record<string, any>;
-  ip_address?: string;
-  user_agent?: string;
-  created_at: string;
 }
 
 // Integration Types
@@ -289,4 +220,17 @@ export interface TeamPerformanceMetric {
   team_name: string;
   tickets_completed: number;
   average_resolution_time: number;
+}
+
+// Audit and Security
+export interface SecurityAuditLog {
+  id: string;
+  user_id?: string;
+  action: string;
+  resource_type: string;
+  resource_id?: string;
+  details?: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
 } 

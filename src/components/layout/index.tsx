@@ -1,17 +1,10 @@
-import Layout from './Layout';
-import AppLayout from './AppLayout';
-import Navbar from './Navbar';
-import Sidebar from './Sidebar';
-import UserMenu from './UserMenu';
-import DashboardLayout from './DashboardLayout';
 
-export {
-  Layout,
-  AppLayout,
-  Navbar,
-  Sidebar,
-  UserMenu,
-  DashboardLayout
+import React from 'react';
+import AppLayout from '@/components/layout/AppLayout';
+
+// Default export for layout
+const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <AppLayout>{children}</AppLayout>;
 };
 
 export default Layout;

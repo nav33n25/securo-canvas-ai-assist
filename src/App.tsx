@@ -29,7 +29,6 @@ import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SecurityPostureDashboard from "./components/dashboard/SecurityPosture";
 import TeamDashboardPage from "./pages/dashboard/team";
-import SecureEditorExamplePage from "./pages/secure-editor-example";
 import { UserRole } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
@@ -63,10 +62,6 @@ const App = () => (
               <Route path="/templates" element={<ProtectedRoute><TemplatesPage /></ProtectedRoute>} />
               <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-              
-              {/* Novel secure editor example */}
-              <Route path="/secure-editor" element={<ProtectedRoute><SecureEditorExamplePage /></ProtectedRoute>} />
-              <Route path="/secure-editor/:documentId" element={<ProtectedRoute><SecureEditorExamplePage /></ProtectedRoute>} />
               
               {/* Team Member+ Routes */}
               <Route path="/dashboard/security" element={

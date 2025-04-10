@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useRouter } from "@/lib/next-compatibility/router";
 import { Link } from "react-router-dom";
@@ -142,7 +141,7 @@ export default function TicketDetailPage() {
         <div className="container mx-auto py-6 space-y-6">
           <div className="flex items-center gap-2 mb-6">
             <Button variant="ghost" size="sm" asChild className="gap-1">
-              <Link to="/tickets">
+              <Link href="/tickets">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Tickets
               </Link>
@@ -156,7 +155,7 @@ export default function TicketDetailPage() {
             </p>
             <div className="flex justify-center mt-4">
               <Button asChild>
-                <Link to="/tickets">View All Tickets</Link>
+                <Link href="/tickets">View All Tickets</Link>
               </Button>
             </div>
           </div>
@@ -170,7 +169,7 @@ export default function TicketDetailPage() {
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" asChild className="gap-1">
-            <Link to="/tickets">
+            <Link href="/tickets">
               <ArrowLeft className="h-4 w-4" />
               Back to Tickets
             </Link>
@@ -182,7 +181,7 @@ export default function TicketDetailPage() {
               size="sm"
               asChild
             >
-              <Link to={`/tickets/${ticket.id}/edit`}>
+              <Link href={`/tickets/${ticket.id}/edit`}>
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </Link>
@@ -308,4 +307,4 @@ export default function TicketDetailPage() {
       </div>
     </AppLayout>
   );
-}
+} 
