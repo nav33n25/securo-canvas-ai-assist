@@ -1,12 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { SecurityTicket } from '@/types/common';
+import { SecurityTicket, TicketCreateData } from '@/types/common';
 import { useToast } from './use-toast';
 
 export function useTickets() {
   const [tickets, setTickets] = useState<SecurityTicket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -22,6 +23,7 @@ export function useTickets() {
         setTickets(data || []);
       } catch (error) {
         console.error('Error fetching tickets:', error);
+        setError(error instanceof Error ? error : new Error('Failed to load tickets'));
         toast({
           title: 'Error',
           description: 'Failed to load tickets',
@@ -63,5 +65,67 @@ export function useTickets() {
     };
   }, [toast]);
   
-  return { tickets, loading };
+  // Add the missing methods
+  const createTicket = async (ticketData: TicketCreateData): Promise<SecurityTicket> => {
+    try {
+      const { data, error } = await supabase
+        .from('security_tickets')
+        .insert([ticketData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      throw error;
+    }
+  };
+  
+  const updateTicket = async (id: string, ticketData: Partial<SecurityTicket>): Promise<SecurityTicket> => {
+    try {
+      const { data, error } = await supabase
+        .from('security_tickets')
+        .update(ticketData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      throw error;
+    }
+  };
+  
+  const getTicketById = async (id: string): Promise<SecurityTicket> => {
+    try {
+      const { data, error } = await supabase
+        .from('security_tickets')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching ticket:', error);
+      throw error;
+    }
+  };
+  
+  // Return all the necessary properties and methods
+  return { 
+    tickets, 
+    loading, 
+    isLoading: loading, // Alias for compatibility 
+    error,
+    createTicket,
+    updateTicket,
+    getTicketById
+  };
 }

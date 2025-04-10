@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useRouter } from "@/lib/next-compatibility/router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,23 +11,18 @@ import { SecurityTicket } from "@/types/common";
 
 export default function TicketsPage() {
   const router = useRouter();
-  const { tickets, isLoading, error } = useTickets();
+  const { tickets, loading, error } = useTickets();
   const [activeView, setActiveView] = useState("all");
 
   const navigateToCreateTicket = () => {
     router.push("/tickets/create");
   };
 
-  // Filter tickets based on the active view
   const getFilteredTickets = (): SecurityTicket[] => {
     switch (activeView) {
       case "assigned":
-        // This would filter tickets assigned to the current user
-        // For now, just return all tickets
         return tickets;
       case "created":
-        // This would filter tickets created by the current user
-        // For now, just return all tickets
         return tickets;
       case "all":
       default:
@@ -66,7 +60,7 @@ export default function TicketsPage() {
           <TabsContent value="all">
             <TicketList 
               tickets={getFilteredTickets()} 
-              isLoading={isLoading} 
+              isLoading={loading} 
               error={error}
             />
           </TabsContent>
@@ -74,7 +68,7 @@ export default function TicketsPage() {
           <TabsContent value="assigned">
             <TicketList 
               tickets={getFilteredTickets()} 
-              isLoading={isLoading} 
+              isLoading={loading} 
               error={error}
             />
           </TabsContent>
@@ -82,7 +76,7 @@ export default function TicketsPage() {
           <TabsContent value="created">
             <TicketList 
               tickets={getFilteredTickets()} 
-              isLoading={isLoading} 
+              isLoading={loading} 
               error={error}
             />
           </TabsContent>

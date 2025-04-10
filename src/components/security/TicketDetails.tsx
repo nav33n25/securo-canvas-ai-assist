@@ -236,7 +236,7 @@ const TicketDetails = () => {
       case 'in_progress':
         return 'secondary';
       case 'resolved':
-        return 'success';
+        return 'secondary'; // Changed from 'success' to 'secondary'
       case 'closed':
         return 'outline';
       default:
@@ -251,7 +251,7 @@ const TicketDetails = () => {
       case 'medium':
         return 'default';
       case 'high':
-        return 'warning';
+        return 'destructive'; // Changed from 'warning' to 'destructive'
       case 'critical':
         return 'destructive';
       default:
