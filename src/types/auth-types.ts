@@ -20,7 +20,7 @@ export const subscriptionTierRoleMap: Record<SubscriptionTier, CombinedUserRole[
 // Role permissions map
 export const rolePermissions: Record<CombinedUserRole, string[]> = {
   'individual': ['create_document', 'edit_own_document', 'view_own_document'],
-  'team_member': ['create_document', 'edit_own_document', 'view_own_document', 'view_team_document'],
-  'team_manager': ['create_document', 'edit_document', 'view_document', 'manage_team', 'assign_tickets'],
-  'administrator': ['create_document', 'edit_document', 'view_document', 'manage_team', 'assign_tickets', 'manage_workspace', 'manage_users']
+  'team_member': ['create_document', 'edit_own_document', 'view_own_document', 'view_team_document', 'manage_team_tickets'],
+  'team_manager': ['create_document', 'edit_document', 'view_document', 'manage_team', 'assign_tickets', 'manage_team_tickets', 'manage_all_tickets'],
+  'administrator': ['create_document', 'edit_document', 'view_document', 'manage_team', 'assign_tickets', 'manage_workspace', 'manage_users', 'manage_all_tickets']
 };

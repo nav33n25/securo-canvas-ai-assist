@@ -37,7 +37,7 @@ export interface SecurityTicket {
   related_cves?: string[]; // Added for compatibility with components
 }
 
-// Update the enums to match the string values used in the components
+// Two variants of status and priority for compatibility 
 export type TicketStatus = 'open' | 'in_progress' | 'review' | 'resolved' | 'closed' | 'Open' | 'In Progress' | 'Pending' | 'Resolved' | 'Closed';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical' | 'Low' | 'Medium' | 'High' | 'Critical';
 
@@ -109,4 +109,23 @@ export const parseTicketDate = (dateString: string | Date): Date => {
     return dateString;
   }
   return new Date(dateString);
+};
+
+// Helper function to convert status between formats
+export const normalizeTicketStatus = (status: TicketStatus): 'open' | 'in_progress' | 'review' | 'resolved' | 'closed' => {
+  if (status === 'Open') return 'open';
+  if (status === 'In Progress') return 'in_progress';
+  if (status === 'Pending') return 'review';
+  if (status === 'Resolved') return 'resolved';
+  if (status === 'Closed') return 'closed';
+  return status;
+};
+
+// Helper function to convert priority between formats
+export const normalizeTicketPriority = (priority: TicketPriority): 'low' | 'medium' | 'high' | 'critical' => {
+  if (priority === 'Low') return 'low';
+  if (priority === 'Medium') return 'medium';
+  if (priority === 'High') return 'high';
+  if (priority === 'Critical') return 'critical';
+  return priority;
 };

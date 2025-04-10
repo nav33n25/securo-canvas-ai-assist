@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -34,12 +35,12 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { SecurityTicket, TicketStatus, TicketPriority, parseTicketDate } from '@/types/common';
+import { SecurityTicket, TicketStatus, TicketPriority, normalizeTicketStatus, normalizeTicketPriority } from '@/types/common';
 
 // Define the schema for the update ticket form
 const updateTicketSchema = z.object({
-  status: z.enum(['open', 'in_progress', 'review', 'resolved', 'closed'] as [TicketStatus, ...TicketStatus[]]),
-  priority: z.enum(['low', 'medium', 'high', 'critical'] as [TicketPriority, ...TicketPriority[]]),
+  status: z.enum(['open', 'in_progress', 'review', 'resolved', 'closed'] as const),
+  priority: z.enum(['low', 'medium', 'high', 'critical'] as const),
   due_date: z.date().optional(),
 });
 
@@ -56,9 +57,9 @@ const UpdateTicketModal: React.FC<UpdateTicketModalProps> = ({ ticket, open, onC
   const form = useForm<z.infer<typeof updateTicketSchema>>({
     resolver: zodResolver(updateTicketSchema),
     defaultValues: {
-      status: ticket.status,
-      priority: ticket.priority,
-      due_date: ticket.due_date ? parseTicketDate(ticket.due_date) : undefined,
+      status: normalizeTicketStatus(ticket.status),
+      priority: normalizeTicketPriority(ticket.priority),
+      due_date: ticket.due_date ? new Date(ticket.due_date) : undefined,
     },
   });
 

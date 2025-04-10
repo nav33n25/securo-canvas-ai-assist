@@ -1,23 +1,9 @@
 
 import { useContext } from 'react';
-import { AuthContext } from '@/contexts/AuthContext';
-import { SubscriptionTier, CombinedUserRole } from '@/types/auth-types';
+import { AuthContext, ProfileUpdateParams, RegisterParams } from '@/contexts/AuthContext';
+import { SubscriptionTier, CombinedUserRole, SubscriptionPlan } from '@/types/auth-types';
 
-export interface RegisterParams {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  subscriptionTier?: string;
-  role?: string;
-}
-
-export interface ProfileUpdateParams {
-  firstName?: string;
-  lastName?: string;
-  jobTitle?: string;
-  avatarUrl?: string;
-}
+export type { ProfileUpdateParams, RegisterParams };
 
 export function useAuth() {
   const context = useContext(AuthContext);

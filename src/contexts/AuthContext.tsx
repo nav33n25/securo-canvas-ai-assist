@@ -4,8 +4,25 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { RegisterParams, ProfileUpdateParams } from '@/hooks/useAuth';
-import { SubscriptionTier, CombinedUserRole, rolePermissions } from '@/types/auth-types';
+import { SubscriptionTier, CombinedUserRole, rolePermissions, UserRole, SubscriptionPlan } from '@/types/auth-types';
+
+export { UserRole, SubscriptionPlan };
+
+export interface ProfileUpdateParams {
+  firstName?: string;
+  lastName?: string;
+  jobTitle?: string;
+  avatarUrl?: string;
+}
+
+export interface RegisterParams {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  subscriptionTier?: string;
+  role?: string;
+}
 
 export interface AuthContextType {
   user: User | null;
@@ -14,13 +31,16 @@ export interface AuthContextType {
   role: CombinedUserRole | null;
   profile: any | null;
   subscriptionTier: SubscriptionTier | null;
+  subscriptionPlan: SubscriptionPlan | null;
   isAuthenticated: boolean;
-  hasPermission: (requiredRoles: CombinedUserRole[]) => boolean;
+  hasPermission: (permission: string | string[]) => boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  signOut: () => Promise<void>;
   register: (params: RegisterParams) => Promise<void>;
   updateProfile: (params: ProfileUpdateParams) => Promise<void>;
   setUserRole: (role: CombinedUserRole) => Promise<void>;
+  setUserPlan: (plan: SubscriptionPlan) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [role, setRole] = useState<CombinedUserRole | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,6 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setRole(null);
           setProfile(null);
           setSubscriptionTier(null);
+          setSubscriptionPlan(null);
         }
       }
     );
@@ -100,7 +122,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('role, subscription_tier')
+        .select('role, subscription_tier, subscription_plan')
         .eq('id', userId)
         .single();
       
@@ -108,10 +130,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setRole(data?.role as CombinedUserRole || 'individual');
       setSubscriptionTier(data?.subscription_tier as SubscriptionTier || 'individual');
+      setSubscriptionPlan(data?.subscription_plan as SubscriptionPlan || 'free');
     } catch (error) {
       console.error('Error fetching user role:', error);
       setRole('individual');
       setSubscriptionTier('individual');
+      setSubscriptionPlan('free');
     }
   };
 
@@ -162,6 +186,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
     }
   };
+
+  // Alias for logout for compatibility
+  const signOut = logout;
 
   const register = async (params: RegisterParams) => {
     try {
@@ -265,9 +292,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const hasPermission = (requiredRoles: CombinedUserRole[]) => {
+  const setUserPlan = async (newPlan: SubscriptionPlan) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ subscription_plan: newPlan })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setSubscriptionPlan(newPlan);
+      
+      toast({
+        title: 'Subscription plan updated',
+        description: `Your subscription plan has been updated to ${newPlan}`,
+      });
+      
+    } catch (error: any) {
+      console.error('Subscription plan update error:', error);
+      toast({
+        title: 'Subscription plan update failed',
+        description: error.message || 'An error occurred updating your subscription plan',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const hasPermission = (requiredPermission: string | string[]) => {
     if (!role) return false;
-    return requiredRoles.includes(role);
+    
+    const userPermissions = rolePermissions[role] || [];
+    
+    if (Array.isArray(requiredPermission)) {
+      return requiredPermission.some(permission => userPermissions.includes(permission));
+    }
+    
+    return userPermissions.includes(requiredPermission);
   };
 
   const isAuthenticated = !!user;
@@ -279,13 +341,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     role,
     profile,
     subscriptionTier,
+    subscriptionPlan,
     isAuthenticated,
     hasPermission,
     login,
     logout,
+    signOut,
     register,
     updateProfile,
     setUserRole,
+    setUserPlan,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

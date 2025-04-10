@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { SecurityTicket, TicketStatus, TicketPriority } from '@/types/common';
 import {
   AlertTriangle,
@@ -26,51 +27,102 @@ export interface TicketItemProps {
   onAssign?: (ticketId: string, userId: string) => Promise<void>;
 }
 
-const statusConfig: Record<TicketStatus, { color: string; icon: React.ReactNode; label: string }> = {
-  open: { 
+// Status configurations for both lowercase and title case variants
+const statusConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+  // Lowercase variants (used in the DB schema)
+  'open': { 
     color: 'bg-green-100 text-green-800 hover:bg-green-200', 
     icon: <Clock className="h-3.5 w-3.5 mr-1" />, 
     label: 'Open' 
   },
-  in_progress: { 
+  'in_progress': { 
     color: 'bg-blue-100 text-blue-800 hover:bg-blue-200', 
     icon: <ClipboardList className="h-3.5 w-3.5 mr-1" />, 
     label: 'In Progress' 
   },
-  review: { 
+  'review': { 
     color: 'bg-purple-100 text-purple-800 hover:bg-purple-200', 
     icon: <Eye className="h-3.5 w-3.5 mr-1" />, 
     label: 'In Review' 
   },
-  resolved: { 
+  'resolved': { 
     color: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200', 
     icon: <CheckCircle className="h-3.5 w-3.5 mr-1" />, 
     label: 'Resolved' 
   },
-  closed: { 
+  'closed': { 
+    color: 'bg-gray-100 text-gray-800 hover:bg-gray-200', 
+    icon: <ArrowRightCircle className="h-3.5 w-3.5 mr-1" />, 
+    label: 'Closed' 
+  },
+  // Title case variants (used in some UI components)
+  'Open': { 
+    color: 'bg-green-100 text-green-800 hover:bg-green-200', 
+    icon: <Clock className="h-3.5 w-3.5 mr-1" />, 
+    label: 'Open' 
+  },
+  'In Progress': { 
+    color: 'bg-blue-100 text-blue-800 hover:bg-blue-200', 
+    icon: <ClipboardList className="h-3.5 w-3.5 mr-1" />, 
+    label: 'In Progress' 
+  },
+  'Pending': { 
+    color: 'bg-purple-100 text-purple-800 hover:bg-purple-200', 
+    icon: <Eye className="h-3.5 w-3.5 mr-1" />, 
+    label: 'Pending' 
+  },
+  'Resolved': { 
+    color: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200', 
+    icon: <CheckCircle className="h-3.5 w-3.5 mr-1" />, 
+    label: 'Resolved' 
+  },
+  'Closed': { 
     color: 'bg-gray-100 text-gray-800 hover:bg-gray-200', 
     icon: <ArrowRightCircle className="h-3.5 w-3.5 mr-1" />, 
     label: 'Closed' 
   },
 };
 
-const priorityConfig: Record<TicketPriority, { color: string; icon: React.ReactNode; label: string }> = {
-  low: { 
+// Priority configurations for both lowercase and title case variants
+const priorityConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+  // Lowercase variants (used in the DB schema)
+  'low': { 
     color: 'bg-blue-100 text-blue-800', 
     icon: <AlertCircle className="h-3.5 w-3.5 mr-1" />, 
     label: 'Low' 
   },
-  medium: { 
+  'medium': { 
     color: 'bg-yellow-100 text-yellow-800', 
     icon: <AlertCircle className="h-3.5 w-3.5 mr-1" />, 
     label: 'Medium' 
   },
-  high: { 
+  'high': { 
     color: 'bg-orange-100 text-orange-800', 
     icon: <AlertTriangle className="h-3.5 w-3.5 mr-1" />, 
     label: 'High' 
   },
-  critical: { 
+  'critical': { 
+    color: 'bg-red-100 text-red-800', 
+    icon: <AlertTriangle className="h-3.5 w-3.5 mr-1" />, 
+    label: 'Critical' 
+  },
+  // Title case variants (used in some UI components)
+  'Low': { 
+    color: 'bg-blue-100 text-blue-800', 
+    icon: <AlertCircle className="h-3.5 w-3.5 mr-1" />, 
+    label: 'Low' 
+  },
+  'Medium': { 
+    color: 'bg-yellow-100 text-yellow-800', 
+    icon: <AlertCircle className="h-3.5 w-3.5 mr-1" />, 
+    label: 'Medium' 
+  },
+  'High': { 
+    color: 'bg-orange-100 text-orange-800', 
+    icon: <AlertTriangle className="h-3.5 w-3.5 mr-1" />, 
+    label: 'High' 
+  },
+  'Critical': { 
     color: 'bg-red-100 text-red-800', 
     icon: <AlertTriangle className="h-3.5 w-3.5 mr-1" />, 
     label: 'Critical' 
@@ -138,10 +190,10 @@ export const TicketItem: React.FC<TicketItemProps> = ({
             <div className="flex-1">
               <h3 className="font-medium text-sm line-clamp-1">{ticket.title}</h3>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className={priorityConfig[ticket.priority].color}>
+                <Badge className={priorityConfig[ticket.priority]?.color || priorityConfig['medium'].color}>
                   <span className="flex items-center text-xs">
-                    {priorityConfig[ticket.priority].icon}
-                    {priorityConfig[ticket.priority].label}
+                    {priorityConfig[ticket.priority]?.icon || priorityConfig['medium'].icon}
+                    {priorityConfig[ticket.priority]?.label || 'Medium'}
                   </span>
                 </Badge>
                 <Badge variant="outline" className="text-xs">
@@ -165,16 +217,16 @@ export const TicketItem: React.FC<TicketItemProps> = ({
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg font-semibold">{ticket.title}</CardTitle>
           <div className="flex gap-2">
-            <Badge className={priorityConfig[ticket.priority].color}>
+            <Badge className={priorityConfig[ticket.priority]?.color || priorityConfig['medium'].color}>
               <span className="flex items-center">
-                {priorityConfig[ticket.priority].icon}
-                {priorityConfig[ticket.priority].label}
+                {priorityConfig[ticket.priority]?.icon || priorityConfig['medium'].icon}
+                {priorityConfig[ticket.priority]?.label || 'Medium'}
               </span>
             </Badge>
-            <Badge className={statusConfig[ticket.status].color}>
+            <Badge className={statusConfig[ticket.status]?.color || statusConfig['open'].color}>
               <span className="flex items-center">
-                {statusConfig[ticket.status].icon}
-                {statusConfig[ticket.status].label}
+                {statusConfig[ticket.status]?.icon || statusConfig['open'].icon}
+                {statusConfig[ticket.status]?.label || 'Open'}
               </span>
             </Badge>
           </div>
@@ -216,7 +268,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
       </CardContent>
       <CardFooter className="border-t pt-3 flex justify-between">
         <div className="flex gap-2">
-          {canManageTickets && ticket.status !== 'closed' && (
+          {canManageTickets && ticket.status !== 'closed' && ticket.status !== 'Closed' && (
             <>
               {!ticket.assignee_id && (
                 <Button variant="outline" size="sm" onClick={handleAssignToMe}>
@@ -225,7 +277,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
                 </Button>
               )}
               
-              {ticket.status === 'open' && (
+              {(ticket.status === 'open' || ticket.status === 'Open') && (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -235,7 +287,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
                 </Button>
               )}
               
-              {ticket.status === 'in_progress' && (
+              {(ticket.status === 'in_progress' || ticket.status === 'In Progress') && (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -245,7 +297,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
                 </Button>
               )}
               
-              {ticket.status === 'review' && (
+              {(ticket.status === 'review' || ticket.status === 'Pending') && (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -255,7 +307,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
                 </Button>
               )}
               
-              {ticket.status === 'resolved' && (
+              {(ticket.status === 'resolved' || ticket.status === 'Resolved') && (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -275,4 +327,4 @@ export const TicketItem: React.FC<TicketItemProps> = ({
   );
 };
 
-export default TicketItem; 
+export default TicketItem;
