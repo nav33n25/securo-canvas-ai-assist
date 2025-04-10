@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from '@/lib/next-compatibility/router';
 import { 
   Table, 
   TableBody, 
@@ -18,30 +19,43 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Search, Filter } from 'lucide-react';
-import { useTickets, Ticket, TicketStatus, TicketPriority } from '@/hooks/useTickets';
+import { Loader2, Plus, Search } from 'lucide-react';
+import { useTickets } from '@/hooks/useTickets';
+import type { SecurityTicket, TicketStatus, TicketPriority } from '@/types/common';
 
 const statusColors = {
-  'new': 'bg-blue-100 text-blue-800',
+  'open': 'bg-blue-100 text-blue-800',
   'in_progress': 'bg-yellow-100 text-yellow-800',
-  'in_review': 'bg-purple-100 text-purple-800',
-  'closed': 'bg-gray-100 text-gray-800'
+  'review': 'bg-purple-100 text-purple-800',
+  'closed': 'bg-gray-100 text-gray-800',
+  'resolved': 'bg-green-100 text-green-800'
 };
 
 const priorityColors = {
   'low': 'bg-green-100 text-green-800',
   'medium': 'bg-blue-100 text-blue-800',
   'high': 'bg-orange-100 text-orange-800',
-  'urgent': 'bg-red-100 text-red-800'
+  'critical': 'bg-red-100 text-red-800'
 };
 
-export default function TicketList() {
+interface TicketListProps {
+  tickets?: SecurityTicket[];
+  isLoading?: boolean;
+  error?: Error | null;
+}
+
+export default function TicketList({ tickets: propTickets, isLoading: propIsLoading, error: propError }: TicketListProps = {}) {
   const router = useRouter();
-  const { tickets, loading, error } = useTickets();
+  const { tickets: hookTickets, isLoading: hookIsLoading, error: hookError } = useTickets();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
-  const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
+  const [filteredTickets, setFilteredTickets] = useState<SecurityTicket[]>([]);
+  
+  // Use props if provided, otherwise use hook values
+  const tickets = propTickets || hookTickets;
+  const isLoading = propIsLoading !== undefined ? propIsLoading : hookIsLoading;
+  const error = propError || hookError;
 
   // Apply filters
   useEffect(() => {
@@ -77,7 +91,7 @@ export default function TicketList() {
     router.push(`/tickets/${ticketId}`);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -88,7 +102,7 @@ export default function TicketList() {
   if (error) {
     return (
       <div className="text-center text-red-500">
-        Error loading tickets: {error}
+        Error loading tickets: {error.message}
       </div>
     );
   }
@@ -125,9 +139,10 @@ export default function TicketList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="in_review">In Review</SelectItem>
+                <SelectItem value="review">In Review</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
@@ -146,7 +161,7 @@ export default function TicketList() {
                 <SelectItem value="low">Low</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -178,12 +193,18 @@ export default function TicketList() {
                 >
                   <TableCell className="font-medium">{ticket.title}</TableCell>
                   <TableCell>
-                    <Badge className={statusColors[ticket.status] || ''} variant="outline">
+                    <Badge 
+                      className={statusColors[ticket.status as keyof typeof statusColors] || ''} 
+                      variant="outline"
+                    >
                       {ticket.status.replace('_', ' ')}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={priorityColors[ticket.priority] || ''} variant="outline">
+                    <Badge 
+                      className={priorityColors[ticket.priority as keyof typeof priorityColors] || ''} 
+                      variant="outline"
+                    >
                       {ticket.priority}
                     </Badge>
                   </TableCell>
@@ -197,4 +218,4 @@ export default function TicketList() {
       )}
     </div>
   );
-} 
+}

@@ -12,7 +12,7 @@ export function useRouter() {
     pathname: location.pathname,
     push: (url: string) => navigate(url),
     replace: (url: string) => navigate(url, { replace: true }),
-    back: () => navigate(-1),
+    back: () => navigate(-1 as any), // Using type assertion
     asPath: location.pathname + location.search,
   };
 }

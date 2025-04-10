@@ -4,6 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { SecurityTicket, TicketCreateData } from '@/types/common';
 import { useAuth } from './useAuth';
 
+// Re-export the types from common
+export type { SecurityTicket as Ticket };
+export type { TicketStatus, TicketPriority } from '@/types/common';
+
 export function useTickets() {
   const [tickets, setTickets] = useState<SecurityTicket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,21 +43,25 @@ export function useTickets() {
 
   const createTicket = async (ticketData: TicketCreateData): Promise<any> => {
     try {
-      const { data, error } = await supabase
+      // Add ticket_type as a default value if not present
+      const data = {
+        ...ticketData,
+        ticket_type: ticketData.ticket_type || 'general',
+        reporter_id: user?.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: newTicket, error } = await supabase
         .from('security_tickets')
-        .insert({
-          ...ticketData,
-          reporter_id: user?.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .insert(data)
         .select()
         .single();
 
       if (error) throw new Error(error.message);
       
-      setTickets(prev => [data, ...prev]);
-      return data;
+      setTickets(prev => [newTicket, ...prev]);
+      return newTicket;
     } catch (err: any) {
       console.error('Error creating ticket:', err);
       throw err;
@@ -116,11 +124,11 @@ export function useTickets() {
 
   const filterTickets = (status?: string, priority?: string, search?: string) => {
     return tickets.filter(ticket => {
-      const matchesStatus = !status || ticket.status === status;
-      const matchesPriority = !priority || ticket.priority === priority;
+      const matchesStatus = !status || status === 'all' || ticket.status === status;
+      const matchesPriority = !priority || priority === 'all' || ticket.priority === priority;
       const matchesSearch = !search || 
         ticket.title.toLowerCase().includes(search.toLowerCase()) || 
-        ticket.description.toLowerCase().includes(search.toLowerCase());
+        (ticket.description && ticket.description.toLowerCase().includes(search.toLowerCase()));
       
       return matchesStatus && matchesPriority && matchesSearch;
     });

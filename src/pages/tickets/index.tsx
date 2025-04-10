@@ -1,12 +1,14 @@
+
 import { useState } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "@/lib/next-compatibility/router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 import TicketList from "@/components/tickets/TicketList";
-import { Ticket, useTickets } from "@/hooks/useTickets";
+import { useTickets } from "@/hooks/useTickets";
+import { SecurityTicket } from "@/types/common";
 
 export default function TicketsPage() {
   const router = useRouter();
@@ -18,7 +20,7 @@ export default function TicketsPage() {
   };
 
   // Filter tickets based on the active view
-  const getFilteredTickets = (): Ticket[] => {
+  const getFilteredTickets = (): SecurityTicket[] => {
     switch (activeView) {
       case "assigned":
         // This would filter tickets assigned to the current user
@@ -88,4 +90,4 @@ export default function TicketsPage() {
       </div>
     </AppLayout>
   );
-} 
+}

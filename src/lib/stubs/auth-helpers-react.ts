@@ -1,4 +1,5 @@
 
+import React, { useState, useEffect } from 'react';
 // Stub implementation for @supabase/auth-helpers-react
 // This provides just enough implementation to satisfy TypeScript
 
@@ -15,9 +16,9 @@ export function useUser() {
     return data.session?.user || null;
   };
   
-  const [user, setUser] = React.useState(null);
+  const [user, setUser] = useState(null);
   
-  React.useEffect(() => {
+  useEffect(() => {
     getUserFromSession().then(setUser);
     
     const { data } = supabase.auth.onAuthStateChange((event, session) => {

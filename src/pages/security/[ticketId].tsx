@@ -91,14 +91,14 @@ const TicketDetailsPage: React.FC = () => {
     }
   };
 
-  const getAssigneeName = (assigneeId: string | null) => {
-    if (!assigneeId) return 'Unassigned';
-    const user = users.find(u => u.id === assigneeId);
+  const getReporterName = (reporterId: string) => {
+    const user = users.find(u => u.id === reporterId);
     return user ? `${user.first_name} ${user.last_name}` : 'Unknown user';
   };
 
-  const getReporterName = (reporterId: string) => {
-    const user = users.find(u => u.id === reporterId);
+  const getAssigneeName = (assigneeId: string | null) => {
+    if (!assigneeId) return 'Unassigned';
+    const user = users.find(u => u.id === assigneeId);
     return user ? `${user.first_name} ${user.last_name}` : 'Unknown user';
   };
 
@@ -192,6 +192,26 @@ const TicketDetailsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  Reported By
+                </p>
+                <p className="font-medium">
+                  {getReporterName(ticket.reporter_id)}
+                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Assigned To
+                </p>
+                <p className="font-medium">
+                  {getAssigneeName(ticket.assignee_id)}
+                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
                   Created
                 </p>
@@ -207,26 +227,6 @@ const TicketDetailsPage: React.FC = () => {
                 </p>
                 <p className="font-medium">
                   {format(new Date(ticket.updated_at), 'PPP')}
-                </p>
-              </div>
-              
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground flex items-center">
-                  <User className="h-4 w-4 mr-2" />
-                  Reported By
-                </p>
-                <p className="font-medium">
-                  {getReporterName(ticket.reported_by)}
-                </p>
-              </div>
-              
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground flex items-center">
-                  <Shield className="h-4 w-4 mr-2" />
-                  Assigned To
-                </p>
-                <p className="font-medium">
-                  {getAssigneeName(ticket.assigned_to)}
                 </p>
               </div>
             </div>
@@ -275,4 +275,4 @@ const TicketDetailsPage: React.FC = () => {
   );
 };
 
-export default TicketDetailsPage; 
+export default TicketDetailsPage;

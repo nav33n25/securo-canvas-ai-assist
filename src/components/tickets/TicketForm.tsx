@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "@/lib/next-compatibility/router";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,20 +24,22 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useTickets, Ticket, TicketPriority, TicketStatus } from "@/hooks/useTickets";
+import { useTickets } from "@/hooks/useTickets";
+import { SecurityTicket, TicketCreateData, TicketStatus, TicketPriority } from "@/types/common";
 
 // Form validation schema
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100),
   description: z.string().min(10, "Description must be at least 10 characters").max(1000),
-  priority: z.enum(["low", "medium", "high", "urgent"]),
-  status: z.enum(["new", "in_progress", "in_review", "closed"]),
+  priority: z.enum(["low", "medium", "high", "critical"] as const),
+  status: z.enum(["open", "in_progress", "review", "resolved", "closed"] as const),
+  ticket_type: z.string().default("general")
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface TicketFormProps {
-  existingTicket?: Ticket; // Optional for edit mode
+  existingTicket?: SecurityTicket; // Optional for edit mode
   isEditMode?: boolean;
 }
 
@@ -53,8 +55,9 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
     defaultValues: {
       title: existingTicket?.title || "",
       description: existingTicket?.description || "",
-      priority: existingTicket?.priority || "medium",
-      status: existingTicket?.status || "new",
+      priority: (existingTicket?.priority || "medium") as TicketPriority,
+      status: (existingTicket?.status || "open") as TicketStatus,
+      ticket_type: existingTicket?.ticket_type || "general"
     },
   });
 
@@ -64,8 +67,9 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
       form.reset({
         title: existingTicket.title,
         description: existingTicket.description || "",
-        priority: existingTicket.priority,
-        status: existingTicket.status,
+        priority: existingTicket.priority as TicketPriority,
+        status: existingTicket.status as TicketStatus,
+        ticket_type: existingTicket.ticket_type || "general"
       });
     }
   }, [existingTicket, form]);
@@ -83,7 +87,7 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
         });
       } else {
         // Create new ticket
-        await createTicket(values);
+        await createTicket(values as TicketCreateData);
         toast({
           title: "Success",
           description: "Ticket created successfully",
@@ -151,6 +155,34 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="ticket_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Type</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select ticket type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="bug">Bug</SelectItem>
+                    <SelectItem value="feature">Feature Request</SelectItem>
+                    <SelectItem value="security">Security Issue</SelectItem>
+                    <SelectItem value="incident">Incident</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
@@ -171,7 +203,7 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
                       <SelectItem value="low">Low</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="critical">Critical</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -195,9 +227,10 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="open">Open</SelectItem>
                       <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="in_review">In Review</SelectItem>
+                      <SelectItem value="review">In Review</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
                     </SelectContent>
                   </Select>
@@ -230,4 +263,4 @@ export default function TicketForm({ existingTicket, isEditMode = false }: Ticke
       </Form>
     </div>
   );
-} 
+}

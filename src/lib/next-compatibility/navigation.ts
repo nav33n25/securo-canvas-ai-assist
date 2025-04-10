@@ -27,8 +27,8 @@ export function useRouter() {
   return {
     push: (path: string) => navigate(path),
     replace: (path: string) => navigate(path, { replace: true }),
-    back: () => navigate(-1),
-    forward: () => navigate(1),
+    back: () => navigate(-1 as any), // Using type assertion
+    forward: () => navigate(1 as any), // Using type assertion
     refresh: () => window.location.reload(),
   };
 }
