@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useRouter } from "@/lib/next-compatibility/router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,11 +8,13 @@ import { Plus } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import TicketList from "@/components/tickets/TicketList";
 import { useTickets } from "@/hooks/useTickets";
+import { useAuth } from "@/hooks/useAuth";
 import { SecurityTicket } from "@/types/common";
 
 export default function TicketsPage() {
   const router = useRouter();
-  const { tickets, loading, error } = useTickets();
+  const { tickets, isLoading, error, filterTickets } = useTickets();
+  const { user } = useAuth();
   const [activeView, setActiveView] = useState("all");
 
   const navigateToCreateTicket = () => {
@@ -19,15 +22,7 @@ export default function TicketsPage() {
   };
 
   const getFilteredTickets = (): SecurityTicket[] => {
-    switch (activeView) {
-      case "assigned":
-        return tickets;
-      case "created":
-        return tickets;
-      case "all":
-      default:
-        return tickets;
-    }
+    return filterTickets(activeView as 'all' | 'assigned' | 'created');
   };
 
   return (
@@ -37,7 +32,7 @@ export default function TicketsPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Tickets</h1>
             <p className="text-muted-foreground">
-              Manage and track support tickets and issues
+              Manage and track security issues and vulnerabilities
             </p>
           </div>
           <Button onClick={navigateToCreateTicket}>
@@ -60,7 +55,7 @@ export default function TicketsPage() {
           <TabsContent value="all">
             <TicketList 
               tickets={getFilteredTickets()} 
-              isLoading={loading} 
+              isLoading={isLoading} 
               error={error}
             />
           </TabsContent>
@@ -68,7 +63,7 @@ export default function TicketsPage() {
           <TabsContent value="assigned">
             <TicketList 
               tickets={getFilteredTickets()} 
-              isLoading={loading} 
+              isLoading={isLoading} 
               error={error}
             />
           </TabsContent>
@@ -76,7 +71,7 @@ export default function TicketsPage() {
           <TabsContent value="created">
             <TicketList 
               tickets={getFilteredTickets()} 
-              isLoading={loading} 
+              isLoading={isLoading} 
               error={error}
             />
           </TabsContent>

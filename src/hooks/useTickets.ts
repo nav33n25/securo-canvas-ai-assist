@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SecurityTicket, TicketCreateData } from '@/types/common';
 import { useToast } from './use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export function useTickets() {
   const [tickets, setTickets] = useState<SecurityTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   
   useEffect(() => {
     const fetchTickets = async () => {
@@ -65,12 +67,30 @@ export function useTickets() {
     };
   }, [toast]);
   
-  // Add the missing methods
+  // Filter tickets based on criteria
+  const filterTickets = (filterType: 'all' | 'assigned' | 'created') => {
+    if (!user) return tickets;
+    
+    switch (filterType) {
+      case 'assigned':
+        return tickets.filter(ticket => ticket.assignee_id === user.id);
+      case 'created':
+        return tickets.filter(ticket => ticket.reporter_id === user.id);
+      case 'all':
+      default:
+        return tickets;
+    }
+  };
+  
+  // Create a new ticket
   const createTicket = async (ticketData: TicketCreateData): Promise<SecurityTicket> => {
     try {
       const { data, error } = await supabase
         .from('security_tickets')
-        .insert([ticketData])
+        .insert([{
+          ...ticketData,
+          reporter_id: user?.id
+        }])
         .select()
         .single();
       
@@ -83,6 +103,7 @@ export function useTickets() {
     }
   };
   
+  // Update an existing ticket
   const updateTicket = async (id: string, ticketData: Partial<SecurityTicket>): Promise<SecurityTicket> => {
     try {
       const { data, error } = await supabase
@@ -101,6 +122,7 @@ export function useTickets() {
     }
   };
   
+  // Get a ticket by its ID
   const getTicketById = async (id: string): Promise<SecurityTicket> => {
     try {
       const { data, error } = await supabase
@@ -124,6 +146,7 @@ export function useTickets() {
     loading, 
     isLoading: loading, // Alias for compatibility 
     error,
+    filterTickets,
     createTicket,
     updateTicket,
     getTicketById

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -95,7 +94,6 @@ const TicketDetails = () => {
 
     fetchTicket();
 
-    // Set up real-time subscription for ticket updates
     const channel = supabase
       .channel(`ticket-${id}`)
       .on('postgres_changes', {
@@ -143,7 +141,6 @@ const TicketDetails = () => {
       
       if (error) throw error;
       
-      // Add activity log for the changes
       const activityPromises = Object.entries(changes).map(([field, change]) => {
         let activityType: string;
         let details: any = { field, old_value: change.old, new_value: change.new };
@@ -236,7 +233,7 @@ const TicketDetails = () => {
       case 'in_progress':
         return 'secondary';
       case 'resolved':
-        return 'secondary'; // Changed from 'success' to 'secondary'
+        return 'secondary';
       case 'closed':
         return 'outline';
       default:
@@ -251,7 +248,7 @@ const TicketDetails = () => {
       case 'medium':
         return 'default';
       case 'high':
-        return 'destructive'; // Changed from 'warning' to 'destructive'
+        return 'destructive';
       case 'critical':
         return 'destructive';
       default:
