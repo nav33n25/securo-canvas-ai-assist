@@ -90,7 +90,7 @@ const ProtectedRoute = ({ children, requiredRoles = [] }: ProtectedRouteProps) =
     }
 
     // If user doesn't have required role
-    if (!hasPermission(requiredRoles)) {
+    if (!requiredRoles.includes(role)) {
       return (
         <motion.div
           initial={{ opacity: 0 }}

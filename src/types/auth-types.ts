@@ -54,6 +54,7 @@ export interface ProfileUpdateParams {
   avatarUrl?: string;
   role?: UserRole;
   subscriptionTier?: SubscriptionTier;
+  jobTitle?: string; // Adding jobTitle to fix profile page errors
 }
 
 export interface RegisterParams {
@@ -63,4 +64,14 @@ export interface RegisterParams {
   lastName?: string;
   subscriptionTier?: SubscriptionTier;
   role?: CombinedUserRole;
+}
+
+export interface TicketCreateData {
+  title: string;
+  description?: string;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  ticket_type?: string;
+  assignee_id?: string;
+  due_date?: string | Date;
 }

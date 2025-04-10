@@ -35,7 +35,8 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { SecurityTicket, TicketStatus, TicketPriority, normalizeTicketStatus, normalizeTicketPriority } from '@/types/common';
+import { SecurityTicket } from '@/types/common';
+import { TicketStatus, TicketPriority, normalizeTicketStatus, normalizeTicketPriority } from '@/types/auth-types';
 
 // Define the schema for the update ticket form
 const updateTicketSchema = z.object({

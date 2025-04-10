@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SecurityTicket, TicketStatus, TicketPriority } from '@/types/common';
+import { SecurityTicket } from '@/types/common';
+import { TicketStatus, TicketPriority } from '@/types/auth-types';
 import TicketItem from './TicketItem';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,14 +56,11 @@ export const TicketList: React.FC<TicketListProps> = ({
   const [typeFilter, setTypeFilter] = useState<string | 'all'>('all');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
-  // Get unique ticket types from tickets
   const ticketTypes = Array.from(new Set(tickets.map(ticket => ticket.ticket_type)));
 
-  // Apply filters when any filter changes
   useEffect(() => {
     let result = [...tickets];
     
-    // Apply search filter
     if (searchQuery) {
       result = result.filter(ticket => 
         ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -70,24 +68,20 @@ export const TicketList: React.FC<TicketListProps> = ({
       );
     }
     
-    // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(ticket => ticket.status === statusFilter);
     }
     
-    // Apply priority filter
     if (priorityFilter !== 'all') {
       result = result.filter(ticket => ticket.priority === priorityFilter);
     }
     
-    // Apply type filter
     if (typeFilter !== 'all') {
       result = result.filter(ticket => ticket.ticket_type === typeFilter);
     }
     
     setFilteredTickets(result);
     
-    // Update active filters
     const newActiveFilters: string[] = [];
     if (statusFilter !== 'all') newActiveFilters.push(`Status: ${statusFilter}`);
     if (priorityFilter !== 'all') newActiveFilters.push(`Priority: ${priorityFilter}`);
@@ -138,7 +132,6 @@ export const TicketList: React.FC<TicketListProps> = ({
       </CardHeader>
       <CardContent>
         <div className="flex flex-col space-y-4">
-          {/* Search and filter bar */}
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
@@ -241,7 +234,6 @@ export const TicketList: React.FC<TicketListProps> = ({
             </Button>
           </div>
           
-          {/* Active filters */}
           {activeFilters.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {activeFilters.map(filter => (
@@ -268,7 +260,6 @@ export const TicketList: React.FC<TicketListProps> = ({
             </div>
           )}
           
-          {/* Tickets list */}
           {filteredTickets.length > 0 ? (
             <div className="space-y-4">
               {filteredTickets.map(ticket => (
@@ -306,4 +297,4 @@ export const TicketList: React.FC<TicketListProps> = ({
   );
 };
 
-export default TicketList; 
+export default TicketList;

@@ -1,6 +1,20 @@
 
 // Common type definitions used across the application
-import { UserRole, TicketStatus, TicketPriority, TicketStatusCapitalized, TicketPriorityCapitalized } from './auth-types';
+import { 
+  UserRole, 
+  TicketStatus, 
+  TicketPriority, 
+  TicketStatusCapitalized, 
+  TicketPriorityCapitalized 
+} from './auth-types';
+
+// Re-export ticket types to avoid import conflicts
+export {
+  TicketStatus,
+  TicketPriority,
+  TicketStatusCapitalized,
+  TicketPriorityCapitalized
+}
 
 export interface User {
   id: string;
@@ -37,6 +51,9 @@ export interface SecurityTicket {
   related_cves?: string[]; // Added for compatibility with components
 }
 
+// Define specific asset types for proper type checking
+export type AssetType = 'Server' | 'Workstation' | 'Mobile' | 'Network' | 'Service' | 'Application' | 'Other';
+
 // Align CveEntry with the security.ts version
 export interface CveEntry {
   id: string;
@@ -49,9 +66,9 @@ export interface CveEntry {
   affected_systems?: string[];
   references?: string[];
   mitigation?: string;
-  cvss_score?: number;
-  last_modified?: string;
-  vulnerability_type?: string;
+  cvss_score: number; // Changed to required
+  last_modified: string; // Changed to required
+  vulnerability_type: string; // Changed to required
 }
 
 // Align RedTeamOperation with the security.ts version
@@ -69,8 +86,8 @@ export interface RedTeamOperation {
   techniques: string[];
   targets: string[];
   severity: string;
-  objective?: string;
-  targeted_systems?: string[];
+  objective: string; // Changed to required
+  targeted_systems: string[]; // Changed to required
   results?: string;
 }
 
@@ -78,7 +95,7 @@ export interface RedTeamOperation {
 export interface Asset {
   id: string;
   name: string;
-  type: string;
+  type: AssetType; // Use the specific AssetType
   status?: string;
   ip?: string;
   ip_address?: string;
@@ -92,6 +109,9 @@ export interface Asset {
   vulnerabilities: string[];
   risk_score?: number;
 }
+
+// Define specific client status types
+export type ClientStatus = 'Active' | 'Prospect' | 'Inactive';
 
 // Align Client and ClientProject interfaces with the client-portal page
 export interface ClientProject {
@@ -111,16 +131,19 @@ export interface Client {
   contact_name: string;
   contact_email: string;
   contact_phone?: string;
-  status: string;
+  status: ClientStatus; // Use the specific ClientStatus type
   projects: ClientProject[];
 }
+
+// Define specific severity types
+export type AlertSeverity = 'Low' | 'Medium' | 'High' | 'Critical';
 
 // SocAlert interface to match the structure used in soc/index.tsx
 export interface SocAlert {
   id: string;
   title: string;
   description: string;
-  severity: string;
+  severity: AlertSeverity; // Use the specific AlertSeverity type
   status: string;
   source: string;
   detected_at: string;
@@ -140,7 +163,7 @@ export interface ThreatIntelFeed {
   title: string;
   description: string;
   source: string;
-  severity: string;
+  severity: AlertSeverity; // Use the specific AlertSeverity type
   published_date: string;
   affected_systems?: string[];
   indicators?: string[];

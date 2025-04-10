@@ -1,247 +1,211 @@
-import React from 'react';
+
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth, UserRole, SubscriptionPlan } from '@/contexts/AuthContext';
+import {
+  User,
+  LogOut,
+  UserCircle,
+  Settings,
+  CreditCard,
+  LucideIcon,
+  Shield,
+  Users,
+  PersonStanding,
+  Sparkles,
+  ChevronDown,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuShortcut,
   DropdownMenuSub,
-  DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-  DropdownMenuPortal,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Shield, 
-  LogOut, 
-  User, 
-  Settings, 
-  Users2, 
-  PersonStanding, 
-  UserCog,
-  CreditCard,
-  Star,
-  Crown
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import RoleSelection from '../auth/RoleSelection';
-import { Badge } from '../ui/badge';
+import { Badge } from '@/components/ui/badge';
 
-// Define plan display information
-const planInfo: Record<SubscriptionPlan, { label: string, color: string, icon: React.ReactNode }> = {
-  'free': { 
-    label: 'Free Plan', 
-    color: 'bg-gray-100 text-gray-800 hover:bg-gray-200', 
-    icon: <Shield className="h-4 w-4 mr-2" />
+interface RoleOption {
+  value: UserRole;
+  label: string;
+  icon: LucideIcon;
+  requiresPlan?: SubscriptionPlan;
+}
+
+const roleOptions: RoleOption[] = [
+  {
+    value: 'individual',
+    label: 'Individual',
+    icon: PersonStanding,
   },
-  'pro': { 
-    label: 'Pro Plan', 
-    color: 'bg-blue-100 text-blue-800 hover:bg-blue-200', 
-    icon: <Star className="h-4 w-4 mr-2" /> 
+  {
+    value: 'team_member',
+    label: 'Team Member',
+    icon: User,
+    requiresPlan: 'pro',
   },
-  'team': { 
-    label: 'Team Plan', 
-    color: 'bg-purple-100 text-purple-800 hover:bg-purple-200', 
-    icon: <Users2 className="h-4 w-4 mr-2" /> 
+  {
+    value: 'team_manager',
+    label: 'Team Manager',
+    icon: Users,
+    requiresPlan: 'team',
   },
-  'enterprise': { 
-    label: 'Enterprise Plan', 
-    color: 'bg-amber-100 text-amber-800 hover:bg-amber-200', 
-    icon: <Crown className="h-4 w-4 mr-2" /> 
-  }
-};
+  {
+    value: 'administrator',
+    label: 'Administrator',
+    icon: Shield,
+    requiresPlan: 'enterprise',
+  },
+];
 
-const UserMenu = () => {
-  const { user, profile, signOut, role, setUserRole, subscriptionPlan, setUserPlan } = useAuth();
-  const [roleDialogOpen, setRoleDialogOpen] = React.useState(false);
-  const navigate = useNavigate();
+const UserMenu: React.FC = () => {
+  const { user, profile, role, subscriptionPlan, setUserRole, signOut } = useAuth();
+  const [isChangingRole, setIsChangingRole] = useState(false);
 
-  if (!user || !profile) return null;
+  const userDisplayName = profile 
+    ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
+    : user?.email?.split('@')[0] || 'User';
+    
+  const userInitials = profile 
+    ? `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}` 
+    : user?.email?.[0].toUpperCase() || 'U';
 
-  // Get initials for avatar fallback
-  const getInitials = () => {
-    if (profile.first_name && profile.last_name) {
-      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
-    }
-    return user.email?.substring(0, 2).toUpperCase() || '??';
-  };
-
-  // Get full name or email
-  const getDisplayName = () => {
-    if (profile.first_name && profile.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
-    }
-    return user.email || 'User';
-  };
-
-  // Format role for display
-  const formatRole = (role: UserRole | null | undefined) => {
-    if (!role) return 'User';
-    return role.replace('_', ' ').replace(/\b\w/g, char => char.toUpperCase());
-  };
-
-  // Get icon for current role
-  const getRoleIcon = () => {
-    switch (role) {
-      case 'individual':
-        return <PersonStanding className="h-4 w-4 mr-2" />;
-      case 'team_member':
-        return <Users2 className="h-4 w-4 mr-2" />;
-      case 'team_manager':
-        return <Shield className="h-4 w-4 mr-2" />;
-      case 'administrator':
-        return <UserCog className="h-4 w-4 mr-2" />;
-      default:
-        return <User className="h-4 w-4 mr-2" />;
+  const handleRoleChange = async (newRole: UserRole) => {
+    setIsChangingRole(true);
+    try {
+      await setUserRole(newRole);
+    } catch (error) {
+      console.error('Failed to change role:', error);
+    } finally {
+      setIsChangingRole(false);
     }
   };
-  
-  // Handle plan upgrade
-  const handlePlanChange = async (plan: SubscriptionPlan) => {
-    if (subscriptionPlan === plan) return;
-    await setUserPlan(plan);
+
+  const canUseRole = (roleOption: RoleOption): boolean => {
+    if (!roleOption.requiresPlan) return true;
+    
+    // Map subscription plans to a hierarchy level
+    const planLevels: Record<SubscriptionPlan, number> = {
+      'free': 0,
+      'pro': 1,
+      'team': 2,
+      'enterprise': 3
+    };
+    
+    const currentPlanLevel = planLevels[subscriptionPlan || 'free'];
+    const requiredPlanLevel = planLevels[roleOption.requiresPlan];
+    
+    return currentPlanLevel >= requiredPlanLevel;
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="hidden md:block text-right mr-2">
-        <p className="text-sm font-medium">{getDisplayName()}</p>
-        <div className="text-xs text-muted-foreground flex items-center justify-end gap-2">
-          {getRoleIcon()}
-          {formatRole(role)}
-          
-          {/* Show subscription badge */}
-          {subscriptionPlan && (
-            <Badge variant="outline" className={`ml-1 text-xs px-1 ${
-              planInfo[subscriptionPlan]?.color || ''
-            }`}>
-              {planInfo[subscriptionPlan]?.icon}
-              <span className="text-xs">{subscriptionPlan}</span>
-            </Badge>
-          )}
-        </div>
-      </div>
-      
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={profile.avatar_url || ''} alt={getDisplayName()} />
-              <AvatarFallback>{getInitials()}</AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" align="end" forceMount>
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{getDisplayName()}</p>
-              <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-              {subscriptionPlan && (
-                <Badge variant="outline" className={`w-fit mt-1 ${
-                  planInfo[subscriptionPlan]?.color || ''
-                }`}>
-                  {planInfo[subscriptionPlan]?.icon}
-                  {planInfo[subscriptionPlan]?.label}
-                </Badge>
-              )}
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
-            
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <CreditCard className="mr-2 h-4 w-4" />
-                <span>Subscription Plan</span>
-                <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">DEV</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground border-b">
-                    In development mode - no payment required
-                  </div>
-                  <DropdownMenuItem 
-                    onClick={() => handlePlanChange('free')}
-                    disabled={subscriptionPlan === 'free'}
-                  >
-                    <Shield className="mr-2 h-4 w-4" />
-                    <span>Free Plan</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => handlePlanChange('pro')}
-                    disabled={subscriptionPlan === 'pro'}
-                  >
-                    <Star className="mr-2 h-4 w-4" />
-                    <span>Professional ($19/month)</span>
-                    <span className="ml-auto text-[10px] text-green-600">Free in dev</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => handlePlanChange('team')}
-                    disabled={subscriptionPlan === 'team'}
-                  >
-                    <Users2 className="mr-2 h-4 w-4" />
-                    <span>Team ($49/month)</span>
-                    <span className="ml-auto text-[10px] text-green-600">Free in dev</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => handlePlanChange('enterprise')}
-                    disabled={subscriptionPlan === 'enterprise'}
-                  >
-                    <Crown className="mr-2 h-4 w-4" />
-                    <span>Enterprise ($99/month)</span>
-                    <span className="ml-auto text-[10px] text-green-600">Free in dev</span>
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-            
-            <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-              <DialogTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Shield className="mr-2 h-4 w-4" />
-                  <span>Switch Role</span>
-                </DropdownMenuItem>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Switch User Role</DialogTitle>
-                  <DialogDescription>
-                    Change your role to access different features of the platform
-                  </DialogDescription>
-                </DialogHeader>
-                <RoleSelection />
-              </DialogContent>
-            </Dialog>
-            <DropdownMenuItem onClick={() => navigate('/workspace-settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={signOut} className="text-red-600">
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Log out</span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="ghost" 
+          className="relative h-9 w-9 rounded-full"
+          aria-label="User menu"
+        >
+          <Avatar className="h-9 w-9">
+            <AvatarImage src={profile?.avatarUrl} alt={userDisplayName} />
+            <AvatarFallback>{userInitials}</AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{userDisplayName}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user?.email}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <Link to="/profile">
+              <UserCircle className="mr-2 h-4 w-4" />
+              Profile
+            </Link>
           </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+          <DropdownMenuItem asChild>
+            <Link to="/account/settings">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/account/billing">
+              <CreditCard className="mr-2 h-4 w-4" />
+              Billing
+              <DropdownMenuShortcut>
+                <Badge variant="outline" className="ml-2 px-1 py-0 text-xs">
+                  {subscriptionPlan === 'free' 
+                    ? 'Free' 
+                    : subscriptionPlan === 'pro' 
+                      ? 'Pro' 
+                      : subscriptionPlan === 'team' 
+                        ? 'Team' 
+                        : 'Enterprise'}
+                </Badge>
+              </DropdownMenuShortcut>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/ai-config">
+              <Sparkles className="mr-2 h-4 w-4" />
+              AI Assistant
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <ChevronDown className="mr-2 h-4 w-4" />
+            <span>Role: {role ? roleOptions.find(r => r.value === role)?.label : 'User'}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="min-w-[220px]">
+            <DropdownMenuRadioGroup value={role} onValueChange={(value) => handleRoleChange(value as UserRole)}>
+              {roleOptions.map((roleOption) => {
+                const isAvailable = canUseRole(roleOption);
+                return (
+                  <DropdownMenuRadioItem
+                    key={roleOption.value}
+                    value={roleOption.value}
+                    disabled={!isAvailable || isChangingRole}
+                    className={!isAvailable ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    <roleOption.icon className="mr-2 h-4 w-4" />
+                    {roleOption.label}
+                    {roleOption.requiresPlan && !isAvailable && (
+                      <Badge variant="outline" className="ml-auto px-1 py-0 text-xs">
+                        {roleOption.requiresPlan.charAt(0).toUpperCase() + roleOption.requiresPlan.slice(1)}+
+                      </Badge>
+                    )}
+                  </DropdownMenuRadioItem>
+                );
+              })}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => signOut()}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
-export default UserMenu; 
+export default UserMenu;

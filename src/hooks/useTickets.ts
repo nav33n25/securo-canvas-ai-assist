@@ -1,129 +1,42 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { SecurityTicket, TicketCreateData } from '@/types/common';
-import { useToast } from './use-toast';
+import { SecurityTicket } from '@/types/common';
+import { TicketCreateData, TicketStatus } from '@/types/auth-types';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
 export function useTickets() {
-  const [tickets, setTickets] = useState<SecurityTicket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const { toast } = useToast();
   const { user } = useAuth();
-  
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('security_tickets')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        setTickets(data || []);
-      } catch (error) {
-        console.error('Error fetching tickets:', error);
-        setError(error instanceof Error ? error : new Error('Failed to load tickets'));
-        toast({
-          title: 'Error',
-          description: 'Failed to load tickets',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { toast } = useToast();
+
+  const getTickets = async (): Promise<SecurityTicket[]> => {
+    setLoading(true);
+    setError(null);
     
-    fetchTickets();
-    
-    // Subscribe to changes
-    const channel = supabase
-      .channel('security_tickets_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'security_tickets'
-      }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setTickets(prev => [payload.new as SecurityTicket, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          setTickets(prev => 
-            prev.map(ticket => 
-              ticket.id === payload.new.id ? payload.new as SecurityTicket : ticket
-            )
-          );
-        } else if (payload.eventType === 'DELETE') {
-          setTickets(prev => 
-            prev.filter(ticket => ticket.id !== payload.old.id)
-          );
-        }
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [toast]);
-  
-  // Filter tickets based on criteria
-  const filterTickets = (filterType: 'all' | 'assigned' | 'created') => {
-    if (!user) return tickets;
-    
-    switch (filterType) {
-      case 'assigned':
-        return tickets.filter(ticket => ticket.assignee_id === user.id);
-      case 'created':
-        return tickets.filter(ticket => ticket.reporter_id === user.id);
-      case 'all':
-      default:
-        return tickets;
-    }
-  };
-  
-  // Create a new ticket
-  const createTicket = async (ticketData: TicketCreateData): Promise<SecurityTicket> => {
     try {
       const { data, error } = await supabase
         .from('security_tickets')
-        .insert([{
-          ...ticketData,
-          reporter_id: user?.id
-        }])
-        .select()
-        .single();
+        .select('*')
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      return data;
-    } catch (error) {
-      console.error('Error creating ticket:', error);
-      throw error;
+      return data as SecurityTicket[];
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      return [];
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Update an existing ticket
-  const updateTicket = async (id: string, ticketData: Partial<SecurityTicket>): Promise<SecurityTicket> => {
-    try {
-      const { data, error } = await supabase
-        .from('security_tickets')
-        .update(ticketData)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      return data;
-    } catch (error) {
-      console.error('Error updating ticket:', error);
-      throw error;
-    }
-  };
-  
-  // Get a ticket by its ID
-  const getTicketById = async (id: string): Promise<SecurityTicket> => {
+
+  const getTicketById = async (id: string): Promise<SecurityTicket | null> => {
+    setLoading(true);
+    setError(null);
+    
     try {
       const { data, error } = await supabase
         .from('security_tickets')
@@ -133,22 +46,141 @@ export function useTickets() {
       
       if (error) throw error;
       
-      return data;
-    } catch (error) {
-      console.error('Error fetching ticket:', error);
-      throw error;
+      return data as SecurityTicket;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      return null;
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Return all the necessary properties and methods
-  return { 
-    tickets, 
-    loading, 
-    isLoading: loading, // Alias for compatibility 
+
+  const createTicket = async (ticketData: TicketCreateData): Promise<SecurityTicket> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      if (!user) throw new Error('User must be logged in to create a ticket');
+      
+      const newTicket = {
+        ...ticketData,
+        status: ticketData.status || 'open',
+        priority: ticketData.priority || 'medium',
+        reporter_id: user.id
+      };
+      
+      const { data, error } = await supabase
+        .from('security_tickets')
+        .insert([newTicket])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Ticket Created',
+        description: 'Your new security ticket has been created successfully.'
+      });
+      
+      return data as SecurityTicket;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to create ticket. Please try again.',
+        variant: 'destructive'
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateTicket = async (id: string, updates: Partial<SecurityTicket>): Promise<SecurityTicket> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('security_tickets')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Ticket Updated',
+        description: 'The security ticket has been updated successfully.'
+      });
+      
+      return data as SecurityTicket;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to update ticket. Please try again.',
+        variant: 'destructive'
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateTicketStatus = async (id: string, status: TicketStatus): Promise<SecurityTicket> => {
+    return updateTicket(id, { status });
+  };
+
+  const assignTicket = async (id: string, userId: string): Promise<SecurityTicket> => {
+    return updateTicket(id, { assignee_id: userId });
+  };
+
+  const deleteTicket = async (id: string): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const { error } = await supabase
+        .from('security_tickets')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Ticket Deleted',
+        description: 'The security ticket has been deleted successfully.'
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to delete ticket. Please try again.',
+        variant: 'destructive'
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    loading,
     error,
-    filterTickets,
+    getTickets,
+    getTicketById,
     createTicket,
     updateTicket,
-    getTicketById
+    updateTicketStatus,
+    assignTicket,
+    deleteTicket
   };
 }

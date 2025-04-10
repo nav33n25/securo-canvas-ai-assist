@@ -3,7 +3,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
-import { SecurityTicket, TicketStatus, TicketPriority } from '@/types/common';
+import { SecurityTicket } from '@/types/common';
+import { TicketStatus, TicketPriority, TicketStatusCapitalized, TicketPriorityCapitalized } from '@/types/auth-types';
 import {
   AlertTriangle,
   CheckCircle,
@@ -127,6 +128,17 @@ const priorityConfig: Record<string, { color: string; icon: React.ReactNode; lab
     icon: <AlertTriangle className="h-3.5 w-3.5 mr-1" />, 
     label: 'Critical' 
   },
+};
+
+// Helper function to normalize status strings for comparison
+const normalizeStatus = (status: string): string => {
+  // Convert title case to lowercase equivalents for comparison
+  if (status === 'Open') return 'open';
+  if (status === 'In Progress') return 'in_progress';
+  if (status === 'Pending') return 'review';
+  if (status === 'Resolved') return 'resolved';
+  if (status === 'Closed') return 'closed';
+  return status;
 };
 
 export const TicketItem: React.FC<TicketItemProps> = ({ 
@@ -268,7 +280,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
       </CardContent>
       <CardFooter className="border-t pt-3 flex justify-between">
         <div className="flex gap-2">
-          {canManageTickets && ticket.status !== 'closed' && ticket.status !== 'Closed' && (
+          {canManageTickets && normalizeStatus(ticket.status) !== 'closed' && (
             <>
               {!ticket.assignee_id && (
                 <Button variant="outline" size="sm" onClick={handleAssignToMe}>
@@ -277,7 +289,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
                 </Button>
               )}
               
-              {(ticket.status === 'open' || ticket.status === 'Open') && (
+              {normalizeStatus(ticket.status) === 'open' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -287,7 +299,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
                 </Button>
               )}
               
-              {(ticket.status === 'in_progress' || ticket.status === 'In Progress') && (
+              {normalizeStatus(ticket.status) === 'in_progress' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -297,7 +309,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
                 </Button>
               )}
               
-              {(ticket.status === 'review' || ticket.status === 'Pending') && (
+              {normalizeStatus(ticket.status) === 'review' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -307,7 +319,7 @@ export const TicketItem: React.FC<TicketItemProps> = ({
                 </Button>
               )}
               
-              {(ticket.status === 'resolved' || ticket.status === 'Resolved') && (
+              {normalizeStatus(ticket.status) === 'resolved' && (
                 <Button 
                   variant="outline" 
                   size="sm" 

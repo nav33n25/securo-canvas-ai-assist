@@ -105,7 +105,7 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenCommandPalette }) => {
   const unreadNotifications = mockNotifications.filter(n => !n.read).length;
 
   const userInitials = profile ? 
-    `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}` : 
+    `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}` : 
     user?.email?.[0].toUpperCase() || 'U';
 
   const getRoleBadgeVariant = () => {

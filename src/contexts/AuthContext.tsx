@@ -33,8 +33,12 @@ export interface AuthContextType {
     avatarUrl?: string;
     role?: UserRole;
     subscriptionTier?: SubscriptionTier;
+    jobTitle?: string;
   };
+  role?: UserRole; // Add role property
+  subscriptionTier?: SubscriptionTier; // Add subscriptionTier property
   subscriptionPlan?: SubscriptionPlan;
+  setUserRole: (role: UserRole) => Promise<void>; // Add setUserRole method
   setUserPlan: (plan: SubscriptionPlan) => void;
   signOut: () => Promise<void>; // Alias for logout for compatibility
 }
@@ -48,6 +52,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
   const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan>('free');
   const [profile, setProfile] = useState<AuthContextType['profile']>();
+  const [currentRole, setCurrentRole] = useState<UserRole>('individual');
+  const [currentSubscriptionTier, setCurrentSubscriptionTier] = useState<SubscriptionTier>('free');
 
   // Initialize auth state
   useEffect(() => {
@@ -61,6 +67,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
           
+          // Set role from user data
+          if (parsedUser.role) {
+            setCurrentRole(parsedUser.role);
+          }
+          
           // Set profile data if available
           if (parsedUser.first_name || parsedUser.last_name) {
             setProfile({
@@ -71,6 +82,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               role: parsedUser.role || 'individual',
               subscriptionTier: parsedUser.subscription_tier || 'free'
             });
+            
+            // Set subscription tier from profile
+            if (parsedUser.subscription_tier) {
+              setCurrentSubscriptionTier(parsedUser.subscription_tier);
+            }
           }
           
           // Set subscription plan
@@ -105,6 +121,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(demoUser);
       localStorage.setItem('user', JSON.stringify(demoUser));
       
+      // Set role from user data
+      if (demoUser.role) {
+        setCurrentRole(demoUser.role);
+      }
+      
       // Set profile data
       setProfile({
         firstName: demoUser.first_name,
@@ -114,6 +135,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role: demoUser.role,
         subscriptionTier: 'enterprise'
       });
+      
+      // Set subscription tier
+      setCurrentSubscriptionTier('enterprise');
       
       // Set subscription plan
       setSubscriptionPlan('enterprise');
@@ -133,6 +157,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       setProfile(undefined);
       setSubscriptionPlan('free');
+      setCurrentRole('individual');
+      setCurrentSubscriptionTier('free');
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
@@ -156,6 +182,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(newUser);
       localStorage.setItem('user', JSON.stringify(newUser));
       
+      // Set role from user data
+      if (newUser.role) {
+        setCurrentRole(newUser.role);
+      }
+      
       // Set profile data
       setProfile({
         firstName: newUser.first_name,
@@ -165,6 +196,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role: newUser.role,
         subscriptionTier: params.subscriptionTier || 'free'
       });
+      
+      // Set subscription tier
+      if (params.subscriptionTier) {
+        setCurrentSubscriptionTier(params.subscriptionTier);
+      }
       
       // Set subscription plan based on subscription tier
       let plan: SubscriptionPlan = 'free';
@@ -181,6 +217,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw error;
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Set user role function
+  const setUserRole = async (role: UserRole) => {
+    try {
+      if (!user) throw new Error('No user is logged in');
+      
+      // Update the user's role
+      const updatedUser: User = {
+        ...user,
+        role: role
+      };
+      
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Update current role state
+      setCurrentRole(role);
+      
+      // Update profile data
+      setProfile({
+        ...profile,
+        role: role
+      });
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Set user role error:', error);
+      return Promise.reject(error);
     }
   };
 
@@ -223,6 +289,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
+      // Update role if changed
+      if (params.role) {
+        setCurrentRole(params.role);
+      }
+      
+      // Update subscription tier if changed
+      if (params.subscriptionTier) {
+        setCurrentSubscriptionTier(params.subscriptionTier);
+      }
+      
       // Update profile data
       setProfile({
         ...profile,
@@ -230,6 +306,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         lastName: updatedUser.last_name,
         avatarUrl: updatedUser.avatar_url,
         role: updatedUser.role,
+        jobTitle: params.jobTitle ?? profile?.jobTitle,
         subscriptionTier: params.subscriptionTier || profile?.subscriptionTier || 'free'
       });
       
@@ -287,7 +364,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     hasPermission,
     checkRole,
     profile,
+    role: currentRole,
+    subscriptionTier: currentSubscriptionTier,
     subscriptionPlan,
+    setUserRole,
     setUserPlan,
     signOut
   };
