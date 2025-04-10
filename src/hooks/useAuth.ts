@@ -7,7 +7,8 @@ export interface RegisterParams {
   password: string;
   firstName: string;
   lastName: string;
-  subscriptionTier: string;
+  subscriptionTier?: string;
+  role?: string;
 }
 
 export interface ProfileUpdateParams {
@@ -36,7 +37,14 @@ export function useAuth() {
     register: (params: RegisterParams) => {
       console.log('Register called with:', params);
       // Simulate successful registration
-      return context.register(params);
+      return context.register({
+        email: params.email,
+        password: params.password,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        subscriptionTier: params.subscriptionTier || 'free',
+        role: params.role
+      });
     },
     resetPassword: (email: string) => {
       console.log('Reset password called for:', email);
