@@ -12,7 +12,7 @@ export function useRouter() {
     pathname: location.pathname,
     query: Object.fromEntries(new URLSearchParams(location.search)),
     asPath: location.pathname + location.search,
-    back: () => navigate(-1), // Navigate back in history correctly
+    back: () => navigate(-1), // This is fine, navigate(-1) is correct
   };
 }
 

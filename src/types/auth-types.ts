@@ -39,11 +39,15 @@ export const userRoleMap: Record<UserRole, CombinedUserRole[]> = {
 };
 
 // Map between subscription tiers and allowed roles
-export const subscriptionTierRoleMap: Record<SubscriptionTier, CombinedUserRole[]> = {
+export const subscriptionTierRoleMap: Record<string, CombinedUserRole[]> = {
   'free': ['individual_basic'],
   'professional': ['individual_professional'],
   'team': ['team_analyst', 'team_hunter', 'team_researcher', 'team_lead', 'team_manager'],
-  'enterprise': ['team_red', 'team_blue', 'security_manager', 'ciso_director', 'platform_admin', 'knowledge_admin']
+  'enterprise': ['team_red', 'team_blue', 'security_manager', 'ciso_director', 'platform_admin', 'knowledge_admin'],
+  // For backward compatibility
+  'pro': ['individual_professional'],
+  'individual': ['individual_basic'],
+  'smb': ['team_analyst', 'team_hunter', 'team_researcher', 'team_lead']
 };
 
 export const rolePermissions: Record<string, string[]> = {

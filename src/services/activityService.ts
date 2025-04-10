@@ -89,3 +89,35 @@ export const formatActivityItems = (items: any[]) => {
     };
   });
 };
+
+export const getActivityFeed = async (limit = 10) => {
+  try {
+    const { data, error } = await supabase
+      .from('activity_feed')
+      .select('*, profiles(*)')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    // Format the data for the activity feed
+    const formatted = data.map(item => ({
+      id: item.id,
+      action: item.action,
+      resourceType: item.resource_type,
+      resourceId: item.resource_id,
+      details: item.details,
+      createdAt: item.created_at,
+      user: item.profiles ? {
+        id: item.profiles.id,
+        name: item.profiles ? `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}`.trim() : 'Unknown User',
+        avatar: item.profiles?.avatar_url || null
+      } : null
+    }));
+
+    return formatted;
+  } catch (error) {
+    console.error('Failed to fetch activity feed:', error);
+    return [];
+  }
+};

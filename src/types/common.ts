@@ -8,6 +8,8 @@ export interface User {
   first_name?: string;
   last_name?: string;
   avatar_url?: string;
+  role?: UserRole;
+  team_id?: string;
 }
 
 export interface SecurityTicket {
@@ -19,12 +21,14 @@ export interface SecurityTicket {
   ticket_type: string;
   created_at: string;
   updated_at: string;
-  reporter_id: string; // Instead of reported_by
-  assignee_id: string | null; // Instead of assigned_to
+  reporter_id: string; // Used in place of reported_by
+  assignee_id: string | null; // Used in place of assigned_to
   assignee_name?: string;
   assignee_avatar?: string;
   category?: string;
   due_date?: string;
+  reported_by?: string; // Alias for reporter_id for backward compatibility
+  assigned_to?: string | null; // Alias for assignee_id for backward compatibility
 }
 
 export type TicketStatus = 'open' | 'in_progress' | 'review' | 'resolved' | 'closed';

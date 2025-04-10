@@ -1,6 +1,13 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 // Import and re-export the UserRole type
-import { UserRole, SubscriptionPlan, CombinedUserRole, SubscriptionTier } from '@/types/auth-types';
+import { 
+  UserRole, 
+  SubscriptionPlan, 
+  CombinedUserRole, 
+  SubscriptionTier,
+  rolePermissions
+} from '@/types/auth-types';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,18 +21,24 @@ export interface AuthContextType {
   role: UserRole | null;
   detailedRole: CombinedUserRole | null;
   subscriptionTier: SubscriptionTier | null;
+  subscriptionPlan: SubscriptionPlan | null; // For backward compatibility
   loading: boolean;
   isAuthenticated: boolean;
   team: any | null;
   login: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
+  signOut: () => Promise<void>; // Alias for logout
   register: (userData: RegisterUserData) => Promise<any>;
   updateProfile: (data: Partial<any>) => Promise<void>;
   setUserRole: (role: UserRole) => Promise<void>;
   setDetailedRole: (role: CombinedUserRole) => Promise<void>;
   setSubscriptionTier: (tier: SubscriptionTier) => Promise<void>;
+  setUserPlan: (plan: SubscriptionPlan) => Promise<void>; // For backward compatibility
   hasPermission: (permissions: string | string[]) => boolean;
   refreshUserData: () => Promise<void>;
+  signIn?: (provider: string) => Promise<void>; // Added for Auth.tsx
+  signUp?: (data: any) => Promise<any>; // Added for Auth.tsx
+  redirectTo?: string; // Added for Auth.tsx
 }
 
 // User registration interface
@@ -48,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<UserRole | null>(null);
   const [detailedRole, setDetailedRole] = useState<CombinedUserRole | null>(null);
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [team, setTeam] = useState<any | null>(null);
@@ -93,6 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setRole(null);
           setDetailedRole(null);
           setSubscriptionTier(null);
+          setSubscriptionPlan(null);
           setIsAuthenticated(false);
         }
       }
@@ -121,17 +136,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const legacyRole = profileData?.role;
       if (legacyRole) {
         const newRole = (legacyRole === 'admin') ? 'administrator' : 'individual';
-        setRole(newRole);
+        setRole(newRole as UserRole);
       }
       
       // Set detailed role
       if (profileData?.combined_role) {
-        setDetailedRole(profileData.combined_role);
+        setDetailedRole(profileData.combined_role as CombinedUserRole);
       }
       
       // Set subscription tier
       if (profileData?.subscription_tier) {
-        setSubscriptionTier(profileData.subscription_tier);
+        setSubscriptionTier(profileData.subscription_tier as SubscriptionTier);
+      }
+
+      // Set subscription plan for backward compatibility
+      if (profileData?.subscription_plan) {
+        setSubscriptionPlan(profileData.subscription_plan as SubscriptionPlan);
+      }
+
+      // Fetch team data if applicable
+      if (profileData?.team_id) {
+        try {
+          const { data: teamData } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('id', profileData.team_id)
+            .single();
+
+          if (teamData) {
+            setTeam({
+              id: teamData.id,
+              name: teamData.name,
+              ...teamData
+            });
+          }
+        } catch (teamError) {
+          console.error('Error fetching team:', teamError);
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -187,25 +228,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Create user profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user?.id,
-          email: email,
-          first_name: firstName,
-          last_name: lastName,
-          role: initialRole || 'user',
-          combined_role: initialRole || 'individual_basic',
-          subscription_tier: initialTier || 'free'
-        });
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: email,
+            first_name: firstName,
+            last_name: lastName,
+            role: initialRole || 'user',
+            combined_role: initialRole || 'individual_basic',
+            subscription_tier: initialTier || 'free'
+          });
 
-      if (profileError) {
-        throw profileError;
+        if (profileError) {
+          throw profileError;
+        }
       }
 
       setIsAuthenticated(true);
       setUser(data.user);
-      await fetchProfile(data.user?.id as string);
+      if (data.user) {
+        await fetchProfile(data.user.id);
+      }
       navigate('/dashboard');
       return data;
     } catch (error: any) {
@@ -225,6 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setRole(null);
       setDetailedRole(null);
       setSubscriptionTier(null);
+      setSubscriptionPlan(null);
       setIsAuthenticated(false);
       navigate('/auth');
     } catch (error) {
@@ -260,10 +306,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       setRole(newRole);
       
-      // Map legacy role to combined role
-      // const combinedRole = userRoleMap[newRole][0];
-      // setDetailedRole(combinedRole);
-
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole })
@@ -282,7 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  const setDetailedRole = async (newDetailedRole: CombinedUserRole) => {
+  const handleDetailedRoleChange = async (newDetailedRole: CombinedUserRole) => {
     try {
       setLoading(true);
       setDetailedRole(newDetailedRole);
@@ -305,7 +347,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  const setSubscriptionTier = async (newTier: SubscriptionTier) => {
+  const handleSubscriptionTierChange = async (newTier: SubscriptionTier) => {
     try {
       setLoading(true);
       setSubscriptionTier(newTier);
@@ -328,15 +370,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const handleUserPlanChange = async (plan: SubscriptionPlan) => {
+    try {
+      setLoading(true);
+      setSubscriptionPlan(plan);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ subscription_plan: plan })
+        .eq('id', user?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      await fetchProfile(user?.id as string);
+    } catch (error) {
+      console.error('Set user plan failed:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const hasPermission = (permissions: string | string[]): boolean => {
     if (!detailedRole) return false;
 
-    const rolePermissionsList = (detailedRole && role) ? AuthContextType.rolePermissions[detailedRole] : [];
+    const currentRolePermissions = rolePermissions[detailedRole] || [];
 
     if (typeof permissions === 'string') {
-      return rolePermissionsList.includes(permissions);
+      return currentRolePermissions.includes(permissions);
     } else {
-      return permissions.every(permission => rolePermissionsList.includes(permission));
+      return permissions.every(permission => currentRolePermissions.includes(permission));
     }
   };
 
@@ -352,16 +417,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role,
     detailedRole,
     subscriptionTier,
+    subscriptionPlan,
     loading,
     isAuthenticated,
     team,
     login,
     logout,
+    signOut: logout, // Alias for logout
     register,
     updateProfile,
     setUserRole,
-    setDetailedRole,
-    setSubscriptionTier,
+    setDetailedRole: handleDetailedRoleChange,
+    setSubscriptionTier: handleSubscriptionTierChange,
+    setUserPlan: handleUserPlanChange,
     hasPermission,
     refreshUserData
   };
@@ -371,169 +439,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-AuthProvider.rolePermissions = {
-  'individual': [
-    'view_own_documents',
-    'edit_own_documents',
-    'use_basic_templates',
-    'create_personal_tickets',
-    'use_basic_ai'
-  ],
-  'individual_basic': [
-    'view_own_documents',
-    'edit_own_documents',
-    'use_basic_templates',
-    'create_personal_tickets',
-    'use_basic_ai'
-  ],
-  'individual_professional': [
-    'view_own_documents',
-    'edit_own_documents',
-    'use_advanced_templates',
-    'create_personal_tickets',
-    'use_enhanced_ai'
-  ],
-  'team_member': [
-    'view_team_documents',
-    'edit_own_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'view_team_tickets',
-    'use_enhanced_ai'
-  ],
-  'team_analyst': [
-    'view_team_documents',
-    'edit_own_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'view_team_tickets',
-    'use_enhanced_ai',
-    'view_analytics_data'
-  ],
-  'team_hunter': [
-    'view_team_documents',
-    'edit_own_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'view_team_tickets',
-    'use_enhanced_ai',
-    'access_security_tools'
-  ],
-  'team_researcher': [
-    'view_team_documents',
-    'edit_own_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'view_team_tickets',
-    'use_enhanced_ai',
-    'access_intel_database'
-  ],
-  'team_red': [
-    'view_team_documents',
-    'edit_own_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'view_team_tickets',
-    'use_enhanced_ai',
-    'access_security_tools',
-    'perform_security_testing'
-  ],
-  'team_blue': [
-    'view_team_documents',
-    'edit_own_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'view_team_tickets',
-    'use_enhanced_ai',
-    'access_security_tools',
-    'manage_security_alerts'
-  ],
-  'team_lead': [
-    'view_team_documents',
-    'edit_team_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'view_team_tickets',
-    'use_enhanced_ai',
-    'access_security_tools',
-    'manage_team_projects'
-  ],
-  'team_manager': [
-    'view_team_documents',
-    'edit_team_documents',
-    'approve_team_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'manage_team_tickets',
-    'view_security_analytics',
-    'use_enhanced_ai',
-    'manage_team_members',
-    'view_compliance_data'
-  ],
-  'security_manager': [
-    'view_team_documents',
-    'edit_team_documents',
-    'approve_team_documents',
-    'use_advanced_templates',
-    'create_team_tickets',
-    'manage_team_tickets',
-    'view_security_analytics',
-    'use_enhanced_ai',
-    'manage_team_members',
-    'view_compliance_data',
-    'manage_security_policies'
-  ],
-  'ciso_director': [
-    'view_all_documents',
-    'edit_team_documents',
-    'approve_all_documents',
-    'use_advanced_templates',
-    'manage_all_tickets',
-    'view_all_analytics',
-    'use_enhanced_ai',
-    'manage_users',
-    'manage_teams',
-    'manage_security_program'
-  ],
-  'administrator': [
-    'view_all_documents',
-    'edit_all_documents',
-    'approve_all_documents',
-    'manage_templates',
-    'manage_all_tickets',
-    'view_all_analytics',
-    'use_enhanced_ai',
-    'manage_users',
-    'manage_teams',
-    'manage_platform_settings',
-    'view_audit_logs'
-  ],
-  'platform_admin': [
-    'view_all_documents',
-    'edit_all_documents',
-    'approve_all_documents',
-    'manage_templates',
-    'manage_all_tickets',
-    'view_all_analytics',
-    'use_enhanced_ai',
-    'manage_users',
-    'manage_teams',
-    'manage_platform_settings',
-    'view_audit_logs',
-    'manage_integrations'
-  ],
-  'knowledge_admin': [
-    'view_all_documents',
-    'edit_all_documents',
-    'approve_all_documents',
-    'manage_templates',
-    'manage_knowledge_base',
-    'use_enhanced_ai',
-    'manage_document_structure',
-    'control_document_access'
-  ]
 };
 
 export const useAuth = () => {

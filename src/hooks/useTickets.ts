@@ -1,193 +1,130 @@
+
 import { useState, useEffect } from 'react';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
-import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/hooks/useUser';
+import { supabase } from '@/lib/supabase';
+import { SecurityTicket, TicketCreateData } from '@/types/common';
+import { useAuth } from './useAuth';
 
-export type TicketStatus = 'new' | 'in_progress' | 'in_review' | 'closed';
-export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
-
-export interface Ticket {
-  id: string;
-  title: string;
-  description: string;
-  status: TicketStatus;
-  priority: TicketPriority;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  assigned_to?: string;
-  workspace_id: string;
-}
-
-export interface TicketCreateData {
-  title: string;
-  description: string;
-  status: TicketStatus;
-  priority: TicketPriority;
-  assigned_to?: string;
-}
-
-export interface TicketFilter {
-  status?: TicketStatus | 'all';
-  priority?: TicketPriority | 'all';
-  searchTerm?: string;
-}
-
-export const useTickets = () => {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+export function useTickets() {
+  const [tickets, setTickets] = useState<SecurityTicket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const supabase = useSupabaseClient();
-  const { toast } = useToast();
-  const { user, workspace } = useUser();
+  const { user } = useAuth();
 
-  // Fetch all tickets for the current workspace
   const fetchTickets = async () => {
-    setIsLoading(true);
-    setError(null);
-
     try {
-      if (!workspace?.id) {
-        throw new Error('No workspace selected');
-      }
-
+      setIsLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
-        .from('tickets')
+        .from('security_tickets')
         .select('*')
-        .eq('workspace_id', workspace.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
+      
       setTickets(data || []);
-    } catch (err) {
+    } catch (err: any) {
+      setError(err);
       console.error('Error fetching tickets:', err);
-      setError(err as Error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch tickets. Please try again.',
-        variant: 'destructive',
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Create a new ticket
-  const createTicket = async (ticketData: TicketCreateData) => {
-    try {
-      if (!user?.id || !workspace?.id) {
-        throw new Error('User or workspace not found');
-      }
+  useEffect(() => {
+    if (user) {
+      fetchTickets();
+    }
+  }, [user]);
 
+  const createTicket = async (ticketData: TicketCreateData): Promise<any> => {
+    try {
       const { data, error } = await supabase
-        .from('tickets')
+        .from('security_tickets')
         .insert({
           ...ticketData,
-          created_by: user.id,
-          workspace_id: workspace.id,
+          reporter_id: user?.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       
-      // Update local state with the new ticket
-      setTickets((prev) => [data, ...prev]);
+      setTickets(prev => [data, ...prev]);
       return data;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating ticket:', err);
       throw err;
     }
   };
 
-  // Update an existing ticket
-  const updateTicket = async (id: string, updates: Partial<Ticket>) => {
+  const updateTicket = async (id: string, updates: Partial<SecurityTicket>): Promise<SecurityTicket> => {
     try {
       const { data, error } = await supabase
-        .from('tickets')
+        .from('security_tickets')
         .update({
           ...updates,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       
-      // Update ticket in local state
-      setTickets((prev) =>
-        prev.map((ticket) => (ticket.id === id ? { ...ticket, ...data } : ticket))
-      );
-      
+      setTickets(prev => prev.map(ticket => ticket.id === id ? data : ticket));
       return data;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating ticket:', err);
       throw err;
     }
   };
 
-  // Delete a ticket
-  const deleteTicket = async (id: string) => {
+  const deleteTicket = async (id: string): Promise<void> => {
     try {
       const { error } = await supabase
-        .from('tickets')
+        .from('security_tickets')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       
-      // Remove ticket from local state
-      setTickets((prev) => prev.filter((ticket) => ticket.id !== id));
-    } catch (err) {
+      setTickets(prev => prev.filter(ticket => ticket.id !== id));
+    } catch (err: any) {
       console.error('Error deleting ticket:', err);
       throw err;
     }
   };
 
-  // Get a single ticket by ID
-  const getTicketById = async (id: string) => {
+  const getTicketById = async (id: string): Promise<SecurityTicket> => {
     try {
       const { data, error } = await supabase
-        .from('tickets')
+        .from('security_tickets')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data;
-    } catch (err) {
-      console.error('Error getting ticket:', err);
+    } catch (err: any) {
+      console.error('Error fetching ticket by ID:', err);
       throw err;
     }
   };
 
-  // Filter tickets based on criteria
-  const filterTickets = (filters: TicketFilter): Ticket[] => {
-    return tickets.filter((ticket) => {
-      const matchesStatus = !filters.status || filters.status === 'all' 
-        ? true 
-        : ticket.status === filters.status;
-        
-      const matchesPriority = !filters.priority || filters.priority === 'all' 
-        ? true 
-        : ticket.priority === filters.priority;
-        
-      const matchesSearch = !filters.searchTerm 
-        ? true 
-        : ticket.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
-          ticket.description?.toLowerCase().includes(filters.searchTerm.toLowerCase());
-          
+  const filterTickets = (status?: string, priority?: string, search?: string) => {
+    return tickets.filter(ticket => {
+      const matchesStatus = !status || ticket.status === status;
+      const matchesPriority = !priority || ticket.priority === priority;
+      const matchesSearch = !search || 
+        ticket.title.toLowerCase().includes(search.toLowerCase()) || 
+        ticket.description.toLowerCase().includes(search.toLowerCase());
+      
       return matchesStatus && matchesPriority && matchesSearch;
     });
   };
-
-  // Load tickets when workspace changes
-  useEffect(() => {
-    if (workspace?.id) {
-      fetchTickets();
-    }
-  }, [workspace?.id]);
 
   return {
     tickets,
@@ -198,6 +135,6 @@ export const useTickets = () => {
     updateTicket,
     deleteTicket,
     getTicketById,
-    filterTickets,
+    filterTickets
   };
-}; 
+}
