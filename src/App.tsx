@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +23,7 @@ import AssetsPage from "./pages/assets";
 import RedTeamPage from "./pages/red-team";
 import ThreatIntelPage from "./pages/threat-intel";
 import TicketingPage from "./pages/ticketing";
+import TicketPage from "./pages/tickets/[id]";
 import WorkspaceSettingsPage from "./pages/workspace-settings";
 import AIConfigPage from "./pages/ai-config";
 import NotFound from "./pages/NotFound";
@@ -63,6 +65,18 @@ const App = () => (
               <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               
+              {/* Ticketing System Routes */}
+              <Route path="/ticketing" element={
+                <ProtectedRoute>
+                  <TicketingPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/tickets/:id" element={
+                <ProtectedRoute>
+                  <TicketPage />
+                </ProtectedRoute>
+              } />
+              
               {/* Team Member+ Routes */}
               <Route path="/dashboard/security" element={
                 <ProtectedRoute requiredRoles={['team_member', 'team_manager', 'administrator']}>
@@ -96,13 +110,6 @@ const App = () => (
               <Route path="/compliance" element={
                 <ProtectedRoute requiredRoles={['team_member', 'team_manager', 'administrator']}>
                   <CompliancePage />
-                </ProtectedRoute>
-              } />
-              
-              {/* Ticketing - Team Member+ */}
-              <Route path="/ticketing" element={
-                <ProtectedRoute requiredRoles={['team_member', 'team_manager', 'administrator']}>
-                  <TicketingPage />
                 </ProtectedRoute>
               } />
               
