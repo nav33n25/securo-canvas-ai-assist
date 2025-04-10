@@ -1,4 +1,3 @@
-
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 
 export function useRouter() {
@@ -12,7 +11,7 @@ export function useRouter() {
     pathname: location.pathname,
     query: { ...params, ...Object.fromEntries(new URLSearchParams(location.search)) },
     asPath: location.pathname + location.search,
-    back: () => navigate('-1'), // Changed from -1 to '-1' (string)
+    back: () => navigate("-1"),
     prefetch: (href: string) => {
       // This is just a stub - React Router doesn't have a direct equivalent
       console.log('Prefetch stub for:', href);

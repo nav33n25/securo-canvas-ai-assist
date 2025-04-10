@@ -6,16 +6,15 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import TicketForm from "@/components/tickets/TicketForm";
 import { Button } from "@/components/ui/button";
-import { useTickets } from "@/hooks/useTickets";
+import { useTickets, Ticket } from "@/hooks/useTickets";
 import { useToast } from "@/hooks/use-toast";
-import { SecurityTicket } from "@/types/common";
 
 export default function EditTicketPage() {
   const router = useRouter();
   const { id } = router.query;
   const { getTicketById } = useTickets();
   const { toast } = useToast();
-  const [ticket, setTicket] = useState<SecurityTicket | null>(null);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,4 +102,4 @@ export default function EditTicketPage() {
       </div>
     </AppLayout>
   );
-}
+} 
