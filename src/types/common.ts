@@ -1,6 +1,6 @@
 
 // Common type definitions used across the application
-import { UserRole } from './auth-types';
+import { UserRole, TicketStatus, TicketPriority, TicketStatusCapitalized, TicketPriorityCapitalized } from './auth-types';
 
 export interface User {
   id: string;
@@ -37,43 +37,24 @@ export interface SecurityTicket {
   related_cves?: string[]; // Added for compatibility with components
 }
 
-// Two variants of status and priority for compatibility 
-export type TicketStatus = 'open' | 'in_progress' | 'review' | 'resolved' | 'closed' | 'Open' | 'In Progress' | 'Pending' | 'Resolved' | 'Closed';
-export type TicketPriority = 'low' | 'medium' | 'high' | 'critical' | 'Low' | 'Medium' | 'High' | 'Critical';
-
-export interface TicketCreateData {
-  title: string;
+// Align CveEntry with the security.ts version
+export interface CveEntry {
+  id: string;
+  cve_id?: string;
   description: string;
-  priority: TicketPriority;
-  status: TicketStatus;
-  ticket_type: string;
-  assignee_id?: string;
-  team_id?: string;
-  due_date?: string;
-  labels?: string[];
-  category?: string;
+  severity: string;
+  published_date: string;
+  updated_date: string;
+  status: string;
+  affected_systems?: string[];
+  references?: string[];
+  mitigation?: string;
+  cvss_score?: number;
+  last_modified?: string;
+  vulnerability_type?: string;
 }
 
-export interface TicketComment {
-  id: string;
-  ticket_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-}
-
-export interface TicketActivity {
-  id: string;
-  ticket_id: string;
-  user_id: string;
-  activity_type: string;
-  details: any;
-  created_at: string;
-}
-
-export type IconType = React.ComponentType<{ className?: string }>;
-
-// Add additional types that are referenced in the components
+// Align RedTeamOperation with the security.ts version
 export interface RedTeamOperation {
   id: string;
   name: string;
@@ -88,20 +69,89 @@ export interface RedTeamOperation {
   techniques: string[];
   targets: string[];
   severity: string;
+  objective?: string;
+  targeted_systems?: string[];
+  results?: string;
 }
 
-export interface CveEntry {
+// Align Asset interface with the expected structure in assets/index.tsx
+export interface Asset {
   id: string;
-  cve_id: string;
+  name: string;
+  type: string;
+  status?: string;
+  ip?: string;
+  ip_address?: string;
+  mac_address?: string;
+  os?: string;
+  location?: string;
+  owner?: string;
+  criticality: string;
+  security_score: number;
+  last_scan: string;
+  vulnerabilities: string[];
+  risk_score?: number;
+}
+
+// Align Client and ClientProject interfaces with the client-portal page
+export interface ClientProject {
+  id: string;
+  name: string;
+  status: string;
+  start_date: string;
+  end_date?: string;
+  client_id?: string;
+  description?: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  industry: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone?: string;
+  status: string;
+  projects: ClientProject[];
+}
+
+// SocAlert interface to match the structure used in soc/index.tsx
+export interface SocAlert {
+  id: string;
+  title: string;
   description: string;
   severity: string;
-  published_date: string;
-  updated_date: string;
   status: string;
-  affected_systems: string[];
-  references: string[];
-  mitigation: string;
+  source: string;
+  detected_at: string;
+  updated_at: string;
+  assigned_to?: string;
+  affected_assets?: string[];
+  mitre_techniques?: string[];
+  asset_id?: string;
+  mitre_technique?: string;
+  created_at?: string;
+  details?: any;
 }
+
+// ThreatIntelFeed interface to match the structure used in threat-intel/index.tsx
+export interface ThreatIntelFeed {
+  id: string;
+  title: string;
+  description: string;
+  source: string;
+  severity: string;
+  published_date: string;
+  affected_systems?: string[];
+  indicators?: string[];
+  mitre_techniques?: string[];
+  name?: string;
+  last_updated?: string;
+  ioc_count?: number;
+  status?: string;
+}
+
+export type IconType = React.ComponentType<{ className?: string }>;
 
 // Fix the ticket analytics function for proper date handling
 export const parseTicketDate = (dateString: string | Date): Date => {
@@ -112,20 +162,20 @@ export const parseTicketDate = (dateString: string | Date): Date => {
 };
 
 // Helper function to convert status between formats
-export const normalizeTicketStatus = (status: TicketStatus): 'open' | 'in_progress' | 'review' | 'resolved' | 'closed' => {
+export const normalizeTicketStatus = (status: TicketStatus | TicketStatusCapitalized): TicketStatus => {
   if (status === 'Open') return 'open';
   if (status === 'In Progress') return 'in_progress';
   if (status === 'Pending') return 'review';
   if (status === 'Resolved') return 'resolved';
   if (status === 'Closed') return 'closed';
-  return status;
+  return status as TicketStatus;
 };
 
 // Helper function to convert priority between formats
-export const normalizeTicketPriority = (priority: TicketPriority): 'low' | 'medium' | 'high' | 'critical' => {
+export const normalizeTicketPriority = (priority: TicketPriority | TicketPriorityCapitalized): TicketPriority => {
   if (priority === 'Low') return 'low';
   if (priority === 'Medium') return 'medium';
   if (priority === 'High') return 'high';
   if (priority === 'Critical') return 'critical';
-  return priority;
+  return priority as TicketPriority;
 };

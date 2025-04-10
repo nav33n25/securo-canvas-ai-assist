@@ -24,3 +24,43 @@ export const rolePermissions: Record<CombinedUserRole, string[]> = {
   'team_manager': ['create_document', 'edit_document', 'view_document', 'manage_team', 'assign_tickets', 'manage_team_tickets', 'manage_all_tickets'],
   'administrator': ['create_document', 'edit_document', 'view_document', 'manage_team', 'assign_tickets', 'manage_workspace', 'manage_users', 'manage_all_tickets']
 };
+
+// Export proper TicketStatus and TicketPriority types to ensure consistency
+export type TicketStatus = 'open' | 'in_progress' | 'review' | 'resolved' | 'closed';
+export type TicketStatusCapitalized = 'Open' | 'In Progress' | 'Pending' | 'Resolved' | 'Closed';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
+export type TicketPriorityCapitalized = 'Low' | 'Medium' | 'High' | 'Critical';
+
+// Mapping between lowercase and capitalized variants
+export const statusMapping: Record<TicketStatusCapitalized, TicketStatus> = {
+  'Open': 'open',
+  'In Progress': 'in_progress',
+  'Pending': 'review',
+  'Resolved': 'resolved',
+  'Closed': 'closed'
+};
+
+export const priorityMapping: Record<TicketPriorityCapitalized, TicketPriority> = {
+  'Low': 'low',
+  'Medium': 'medium',
+  'High': 'high',
+  'Critical': 'critical'
+};
+
+// For ProfileUpdateParams
+export interface ProfileUpdateParams {
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
+  role?: UserRole;
+  subscriptionTier?: SubscriptionTier;
+}
+
+export interface RegisterParams {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  subscriptionTier?: SubscriptionTier;
+  role?: CombinedUserRole;
+}

@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { SecurityTicket, TicketPriority, TicketStatus, User } from '@/types/common';
+import { SecurityTicket, normalizeTicketStatus, normalizeTicketPriority } from '@/types/common';
+import { TicketStatus, TicketPriority } from '@/types/auth-types';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -88,9 +90,9 @@ export const TicketForm: React.FC<TicketFormProps> = ({
     defaultValues: {
       title: ticket?.title || '',
       description: ticket?.description || '',
-      priority: ticket?.priority || 'medium',
+      priority: ticket ? normalizeTicketPriority(ticket.priority) : 'medium',
       ticket_type: ticket?.ticket_type || TICKET_TYPES[0],
-      status: ticket?.status || 'open',
+      status: ticket ? normalizeTicketStatus(ticket.status) : 'open',
       assignee_id: ticket?.assignee_id || undefined,
       due_date: ticket?.due_date ? new Date(ticket.due_date) : undefined,
     },
@@ -369,4 +371,4 @@ export const TicketForm: React.FC<TicketFormProps> = ({
   );
 };
 
-export default TicketForm; 
+export default TicketForm;

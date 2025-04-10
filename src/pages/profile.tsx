@@ -1,166 +1,135 @@
 
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
+import * as z from 'zod';
+import { useAuth, ProfileUpdateParams } from '@/hooks/useAuth';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/components/ui/use-toast';
+import AppLayout from '@/components/layout/AppLayout';
 
-type ProfileFormValues = {
-  first_name: string | null;
-  last_name: string | null;
-  job_title: string | null;
-  avatar_url: string | null;
-};
+// Form schema
+const profileFormSchema = z.object({
+  firstName: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
+  lastName: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }).optional(),
+  avatarUrl: z.string().url({ message: 'Please enter a valid URL.' }).optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const ProfilePage = () => {
   const { user, profile, updateProfile } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  
+
   const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      first_name: profile?.first_name || '',
-      last_name: profile?.last_name || '',
-      job_title: profile?.job_title || '',
-      avatar_url: profile?.avatar_url || '',
+      firstName: profile?.firstName || '',
+      lastName: profile?.lastName || '',
+      email: profile?.email || user?.email || '',
+      avatarUrl: profile?.avatarUrl || '',
     },
   });
 
   const onSubmit = async (data: ProfileFormValues) => {
-    setIsLoading(true);
-    await updateProfile(data);
-    setIsLoading(false);
-  };
+    try {
+      // Create a ProfileUpdateParams object from the form data
+      const updateParams: ProfileUpdateParams = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        avatarUrl: data.avatarUrl,
+      };
 
-  const userInitials = profile ? 
-    `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}` : 
-    user?.email?.[0].toUpperCase() || 'U';
+      await updateProfile(updateParams);
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been updated successfully.',
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update profile. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <h1 className="text-3xl font-bold">Profile</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="col-span-2">
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>Update your profile information</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="first_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="last_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
+      <div className="container mx-auto py-8">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle>Profile Settings</CardTitle>
+            <CardDescription>Update your personal information</CardDescription>
+          </CardHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="job_title"
+                    name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Job Title</FormLabel>
+                        <FormLabel>First Name</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value || ''} />
+                          <Input {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
                   <FormField
                     control={form.control}
-                    name="avatar_url"
+                    name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Avatar URL</FormLabel>
+                        <FormLabel>Last Name</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value || ''} />
+                          <Input {...field} />
                         </FormControl>
-                        <FormDescription>
-                          Enter a URL for your profile picture
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
-                  <div className="pt-4">
-                    <Button 
-                      type="submit" 
-                      disabled={isLoading} 
-                      className="bg-secure hover:bg-secure-darker"
-                    >
-                      {isLoading ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Preview</CardTitle>
-              <CardDescription>How others will see you</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center space-y-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profile?.avatar_url || ''} alt={profile?.first_name || user?.email || ''} />
-                <AvatarFallback className="text-2xl">{userInitials}</AvatarFallback>
-              </Avatar>
-              
-              <div className="text-center">
-                <h3 className="text-lg font-semibold">
-                  {profile?.first_name && profile?.last_name 
-                    ? `${profile.first_name} ${profile.last_name}` 
-                    : user?.email}
-                </h3>
-                {profile?.job_title && (
-                  <p className="text-muted-foreground">{profile.job_title}</p>
-                )}
-                <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="avatarUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Avatar URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://example.com/avatar.jpg" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+              <CardFooter>
+                <Button type="submit">Update Profile</Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </Card>
       </div>
     </AppLayout>
   );

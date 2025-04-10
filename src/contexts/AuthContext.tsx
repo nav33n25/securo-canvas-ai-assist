@@ -1,357 +1,309 @@
 
-import React, { createContext, useState, useEffect, ReactNode, useContext } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
-import { toast } from '@/components/ui/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { SubscriptionTier, CombinedUserRole, rolePermissions, UserRole, SubscriptionPlan } from '@/types/auth-types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { 
+  UserRole, 
+  CombinedUserRole, 
+  SubscriptionTier, 
+  SubscriptionPlan,
+  ProfileUpdateParams,
+  RegisterParams,
+  rolePermissions
+} from '@/types/auth-types';
+import { User } from '@/types/common';
 
-export { UserRole, SubscriptionPlan };
-
-export interface ProfileUpdateParams {
-  firstName?: string;
-  lastName?: string;
-  jobTitle?: string;
-  avatarUrl?: string;
-}
-
-export interface RegisterParams {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  subscriptionTier?: string;
-  role?: string;
-}
+// Use export type for re-exports when isolatedModules is enabled
+export type { UserRole, SubscriptionPlan, ProfileUpdateParams, RegisterParams };
 
 export interface AuthContextType {
   user: User | null;
-  session: Session | null;
-  loading: boolean;
-  role: CombinedUserRole | null;
-  profile: any | null;
-  subscriptionTier: SubscriptionTier | null;
-  subscriptionPlan: SubscriptionPlan | null;
   isAuthenticated: boolean;
-  hasPermission: (permission: string | string[]) => boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  signOut: () => Promise<void>;
   register: (params: RegisterParams) => Promise<void>;
+  logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  confirmPasswordReset: (token: string, newPassword: string) => Promise<void>;
   updateProfile: (params: ProfileUpdateParams) => Promise<void>;
-  setUserRole: (role: CombinedUserRole) => Promise<void>;
-  setUserPlan: (plan: SubscriptionPlan) => Promise<void>;
+  hasPermission: (permission: string) => boolean;
+  checkRole: (roles: UserRole | UserRole[]) => boolean;
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    avatarUrl?: string;
+    role?: UserRole;
+    subscriptionTier?: SubscriptionTier;
+  };
+  subscriptionPlan?: SubscriptionPlan;
+  setUserPlan: (plan: SubscriptionPlan) => void;
+  signOut: () => Promise<void>; // Alias for logout for compatibility
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create the context with a default empty value
+export const AuthContext = createContext<AuthContextType | null>(null);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
-  
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  
-  return context;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+// Provider component
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<CombinedUserRole | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
-  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier | null>(null);
-  const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan | null>(null);
-  const navigate = useNavigate();
+  const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan>('free');
+  const [profile, setProfile] = useState<AuthContextType['profile']>();
 
+  // Initialize auth state
   useEffect(() => {
-    // Set up auth state listener first
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Don't make additional Supabase calls directly in the callback
-        // to avoid potential deadlocks
-        if (session?.user?.id) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-            fetchUserProfile(session.user.id);
-          }, 0);
-        } else {
-          setRole(null);
-          setProfile(null);
-          setSubscriptionTier(null);
-          setSubscriptionPlan(null);
-        }
-      }
-    );
-
-    // Then check for existing session
-    const initializeAuth = async () => {
+    // Simulate checking for an existing session
+    const checkAuth = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
-        
-        if (data.session?.user?.id) {
-          await fetchUserRole(data.session.user.id);
-          await fetchUserProfile(data.session.user.id);
+        // Mock implementation - in a real app, this would check a token in localStorage
+        // or make an API call to validate the current session
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          
+          // Set profile data if available
+          if (parsedUser.first_name || parsedUser.last_name) {
+            setProfile({
+              firstName: parsedUser.first_name,
+              lastName: parsedUser.last_name,
+              email: parsedUser.email,
+              avatarUrl: parsedUser.avatar_url,
+              role: parsedUser.role || 'individual',
+              subscriptionTier: parsedUser.subscription_tier || 'free'
+            });
+          }
+          
+          // Set subscription plan
+          setSubscriptionPlan(parsedUser.subscription_plan || 'free');
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('Auth initialization error:', error);
       } finally {
         setLoading(false);
       }
     };
-
-    initializeAuth();
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    
+    checkAuth();
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role, subscription_tier, subscription_plan')
-        .eq('id', userId)
-        .single();
-      
-      if (error) throw error;
-      
-      setRole(data?.role as CombinedUserRole || 'individual');
-      setSubscriptionTier(data?.subscription_tier as SubscriptionTier || 'individual');
-      setSubscriptionPlan(data?.subscription_plan as SubscriptionPlan || 'free');
-    } catch (error) {
-      console.error('Error fetching user role:', error);
-      setRole('individual');
-      setSubscriptionTier('individual');
-      setSubscriptionPlan('free');
-    }
-  };
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) throw error;
-      
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      setProfile(null);
-    }
-  };
-
+  // Login function
   const login = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      // Mock implementation - in a real app, this would call an authentication API
+      // Simulate successful login with a demo user
+      const demoUser: User = {
+        id: 'user-001',
+        email: email,
+        first_name: 'Demo',
+        last_name: 'User',
+        avatar_url: 'https://ui-avatars.com/api/?name=Demo+User',
+        role: 'administrator',
+        team_id: 'team-001'
+      };
       
-      if (error) throw error;
+      setUser(demoUser);
+      localStorage.setItem('user', JSON.stringify(demoUser));
       
-    } catch (error: any) {
-      console.error('Login error:', error);
-      toast({
-        title: 'Login failed',
-        description: error.message || 'An error occurred during login',
-        variant: 'destructive',
+      // Set profile data
+      setProfile({
+        firstName: demoUser.first_name,
+        lastName: demoUser.last_name,
+        email: demoUser.email,
+        avatarUrl: demoUser.avatar_url,
+        role: demoUser.role,
+        subscriptionTier: 'enterprise'
       });
+      
+      // Set subscription plan
+      setSubscriptionPlan('enterprise');
+    } catch (error) {
+      console.error('Login error:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Logout function
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
-      navigate('/login');
-    } catch (error: any) {
+      // Mock implementation - in a real app, this would call a logout API
+      localStorage.removeItem('user');
+      setUser(null);
+      setProfile(undefined);
+      setSubscriptionPlan('free');
+    } catch (error) {
       console.error('Logout error:', error);
-      toast({
-        title: 'Logout failed',
-        description: error.message || 'An error occurred during logout',
-        variant: 'destructive',
-      });
+      throw error;
     }
   };
 
-  // Alias for logout for compatibility
-  const signOut = logout;
-
+  // Register function
   const register = async (params: RegisterParams) => {
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      // Mock implementation - in a real app, this would call a registration API
+      const newUser: User = {
+        id: 'user-' + Math.random().toString(36).substr(2, 9),
         email: params.email,
-        password: params.password,
-        options: {
-          data: {
-            first_name: params.firstName,
-            last_name: params.lastName,
-            role: params.role || 'individual',
-            subscription_tier: params.subscriptionTier || 'individual'
-          }
-        }
+        first_name: params.firstName,
+        last_name: params.lastName,
+        avatar_url: `https://ui-avatars.com/api/?name=${params.firstName}+${params.lastName}`,
+        role: params.role || 'individual',
+      };
+      
+      setUser(newUser);
+      localStorage.setItem('user', JSON.stringify(newUser));
+      
+      // Set profile data
+      setProfile({
+        firstName: newUser.first_name,
+        lastName: newUser.last_name,
+        email: newUser.email,
+        avatarUrl: newUser.avatar_url,
+        role: newUser.role,
+        subscriptionTier: params.subscriptionTier || 'free'
       });
       
-      if (error) throw error;
-      
-      toast({
-        title: 'Registration successful',
-        description: 'Your account has been created successfully',
-      });
-      
-    } catch (error: any) {
+      // Set subscription plan based on subscription tier
+      let plan: SubscriptionPlan = 'free';
+      if (params.subscriptionTier === 'professional' || params.subscriptionTier === 'pro') {
+        plan = 'pro';
+      } else if (params.subscriptionTier === 'smb' || params.subscriptionTier === 'team') {
+        plan = 'team';
+      } else if (params.subscriptionTier === 'enterprise') {
+        plan = 'enterprise';
+      }
+      setSubscriptionPlan(plan);
+    } catch (error) {
       console.error('Registration error:', error);
-      toast({
-        title: 'Registration failed',
-        description: error.message || 'An error occurred during registration',
-        variant: 'destructive',
-      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reset password function
+  const resetPassword = async (email: string) => {
+    try {
+      // Mock implementation - in a real app, this would call a password reset API
+      console.log(`Password reset email sent to ${email}`);
+    } catch (error) {
+      console.error('Password reset error:', error);
       throw error;
     }
   };
 
+  // Confirm password reset function
+  const confirmPasswordReset = async (token: string, newPassword: string) => {
+    try {
+      // Mock implementation - in a real app, this would call a confirm password reset API
+      console.log(`Password reset confirmed with token ${token}`);
+    } catch (error) {
+      console.error('Confirm password reset error:', error);
+      throw error;
+    }
+  };
+
+  // Update profile function
   const updateProfile = async (params: ProfileUpdateParams) => {
-    if (!user) return;
-    
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: params.firstName,
-          last_name: params.lastName,
-          job_title: params.jobTitle,
-          avatar_url: params.avatarUrl,
-        })
-        .eq('id', user.id);
+      if (!user) throw new Error('No user is logged in');
       
-      if (error) throw error;
+      // Mock implementation - in a real app, this would call a profile update API
+      const updatedUser: User = {
+        ...user,
+        first_name: params.firstName ?? user.first_name,
+        last_name: params.lastName ?? user.last_name,
+        avatar_url: params.avatarUrl ?? user.avatar_url,
+        role: params.role ?? user.role,
+      };
       
-      // Update the profile state
-      setProfile(prev => ({
-        ...prev,
-        first_name: params.firstName || prev?.first_name,
-        last_name: params.lastName || prev?.last_name,
-        job_title: params.jobTitle || prev?.job_title,
-        avatar_url: params.avatarUrl || prev?.avatar_url,
-      }));
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
       
-      toast({
-        title: 'Profile updated',
-        description: 'Your profile has been updated successfully',
+      // Update profile data
+      setProfile({
+        ...profile,
+        firstName: updatedUser.first_name,
+        lastName: updatedUser.last_name,
+        avatarUrl: updatedUser.avatar_url,
+        role: updatedUser.role,
+        subscriptionTier: params.subscriptionTier || profile?.subscriptionTier || 'free'
       });
       
-    } catch (error: any) {
+      // Update subscription plan if subscription tier changed
+      if (params.subscriptionTier) {
+        let plan: SubscriptionPlan = 'free';
+        if (params.subscriptionTier === 'professional' || params.subscriptionTier === 'pro') {
+          plan = 'pro';
+        } else if (params.subscriptionTier === 'smb' || params.subscriptionTier === 'team') {
+          plan = 'team';
+        } else if (params.subscriptionTier === 'enterprise') {
+          plan = 'enterprise';
+        }
+        setSubscriptionPlan(plan);
+      }
+    } catch (error) {
       console.error('Profile update error:', error);
-      toast({
-        title: 'Profile update failed',
-        description: error.message || 'An error occurred updating your profile',
-        variant: 'destructive',
-      });
       throw error;
     }
   };
 
-  const setUserRole = async (newRole: CombinedUserRole) => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', user.id);
-      
-      if (error) throw error;
-      
-      setRole(newRole);
-      
-      toast({
-        title: 'Role updated',
-        description: `Your role has been updated to ${newRole}`,
-      });
-      
-    } catch (error: any) {
-      console.error('Role update error:', error);
-      toast({
-        title: 'Role update failed',
-        description: error.message || 'An error occurred updating your role',
-        variant: 'destructive',
-      });
-    }
+  // Convenience function to check if user has a specific permission
+  const hasPermission = (permission: string): boolean => {
+    if (!user || !user.role) return false;
+    const userPermissions = rolePermissions[user.role as CombinedUserRole] || [];
+    return userPermissions.includes(permission);
   };
 
-  const setUserPlan = async (newPlan: SubscriptionPlan) => {
-    if (!user) return;
+  // Convenience function to check if user has one of the specified roles
+  const checkRole = (roles: UserRole | UserRole[]): boolean => {
+    if (!user || !user.role) return false;
     
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ subscription_plan: newPlan })
-        .eq('id', user.id);
-      
-      if (error) throw error;
-      
-      setSubscriptionPlan(newPlan);
-      
-      toast({
-        title: 'Subscription plan updated',
-        description: `Your subscription plan has been updated to ${newPlan}`,
-      });
-      
-    } catch (error: any) {
-      console.error('Subscription plan update error:', error);
-      toast({
-        title: 'Subscription plan update failed',
-        description: error.message || 'An error occurred updating your subscription plan',
-        variant: 'destructive',
-      });
-    }
+    const rolesToCheck = Array.isArray(roles) ? roles : [roles];
+    return rolesToCheck.includes(user.role as UserRole);
   };
 
-  const hasPermission = (requiredPermission: string | string[]) => {
-    if (!role) return false;
-    
-    const userPermissions = rolePermissions[role] || [];
-    
-    if (Array.isArray(requiredPermission)) {
-      return requiredPermission.some(permission => userPermissions.includes(permission));
-    }
-    
-    return userPermissions.includes(requiredPermission);
+  // Set user subscription plan
+  const setUserPlan = (plan: SubscriptionPlan) => {
+    setSubscriptionPlan(plan);
   };
 
-  const isAuthenticated = !!user;
+  const signOut = logout; // Alias for compatibility
 
+  // Create the context value object
   const value: AuthContextType = {
     user,
-    session,
+    isAuthenticated: !!user,
     loading,
-    role,
-    profile,
-    subscriptionTier,
-    subscriptionPlan,
-    isAuthenticated,
-    hasPermission,
     login,
-    logout,
-    signOut,
     register,
+    logout,
+    resetPassword,
+    confirmPasswordReset,
     updateProfile,
-    setUserRole,
+    hasPermission,
+    checkRole,
+    profile,
+    subscriptionPlan,
     setUserPlan,
+    signOut
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Custom hook to use the auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
