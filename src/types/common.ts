@@ -29,6 +29,8 @@ export interface SecurityTicket {
   due_date?: string;
   reported_by?: string; // Alias for reporter_id for backward compatibility
   assigned_to?: string | null; // Alias for assignee_id for backward compatibility
+  labels?: string[];
+  team_id?: string;
 }
 
 export type TicketStatus = 'open' | 'in_progress' | 'review' | 'resolved' | 'closed';
@@ -40,6 +42,28 @@ export interface TicketCreateData {
   priority: TicketPriority;
   status: TicketStatus;
   ticket_type: string;
+  assignee_id?: string;
+  team_id?: string;
+  due_date?: string;
+  labels?: string[];
+  category?: string;
+}
+
+export interface TicketComment {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface TicketActivity {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  activity_type: string;
+  details: any;
+  created_at: string;
 }
 
 export type IconType = React.ComponentType<{ className?: string }>;
